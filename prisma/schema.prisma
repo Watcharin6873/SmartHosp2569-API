@@ -1,0 +1,261 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Users {
+  id             Int             @id @default(autoincrement())
+  email          String
+  title_th       String
+  name_th        String
+  position_id    String
+  position       String
+  hcode          String
+  hcode9         String
+  hname_th       String
+  district       String
+  province       String
+  zone           String
+  user_type      User_type       @default(Unit_service)
+  role           Role            @default(user)
+  enabled        Boolean         @default(false)
+  cratedAt       DateTime        @default(now())
+  updateAt       DateTime        @updatedAt
+  topics         Topic[]
+  questions      Question[]
+  choices        Choice[]
+  categories     Category[]
+  evaluates      Evaluate[]
+  evidences      Evidence_all[]
+  comments       Comment[]
+  reply_comments Reply_comment[]
+  log_events     LogEvent[]
+}
+
+model Topic {
+  id         Int        @id @default(autoincrement())
+  topic_name String     @db.Text
+  user_id    Int
+  status     Boolean    @default(false)
+  cratedAt   DateTime   @default(now())
+  updateAt   DateTime   @updatedAt
+  questions  Question[]
+  choices    Choice[]
+  evaluates  Evaluate[]
+  categorys  Category[]
+
+  users Users @relation(fields: [user_id], references: [id])
+}
+
+model Category {
+  id                Int            @id @default(autoincrement())
+  topic_id          Int
+  category_name_th  String         @db.Text
+  category_name_eng String         @db.Text
+  fiscal_year       String
+  user_id           Int
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  questions         Question[]
+  choices           Choice[]
+  evaluates         Evaluate[]
+  evidences         Evidence_all[]
+
+  topics Topic @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+  users  Users @relation(fields: [user_id], references: [id])
+}
+
+model Question {
+  id            Int        @id @default(autoincrement())
+  topic_id      Int
+  category_id   Int
+  question_name String     @db.Text
+  user_id       Int
+  cratedAt      DateTime   @default(now())
+  updateAt      DateTime   @updatedAt
+  choices       Choice[]
+  evaluates     Evaluate[]
+
+  topics     Topic    @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+  categories Category @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  users      Users    @relation(fields: [user_id], references: [id])
+}
+
+model Choice {
+  id          Int        @id @default(autoincrement())
+  topic_id    Int
+  category_id Int
+  question_id Int
+  choice_name String     @db.Text
+  score_1     Int        @default(0)
+  score_2     Int        @default(0)
+  user_id     Int
+  cratedAt    DateTime   @default(now())
+  updateAt    DateTime   @updatedAt
+  evaluates   Evaluate[]
+
+  topics     Topic    @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+  categories Category @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  questions  Question @relation(fields: [question_id], references: [id], onDelete: Cascade)
+  users      Users    @relation(fields: [user_id], references: [id])
+}
+
+model Evaluate {
+  id            Int       @id @default(autoincrement())
+  topic_id      Int
+  category_id   Int
+  question_id   Int
+  choice_id     Int
+  status_check  Boolean   @default(false)
+  hospital_code String
+  hospital_name String
+  hospital_type String
+  alert_id      String?
+  file_name     String?
+  ssj_approve   Boolean   @default(false)
+  zone_approve  Boolean   @default(false)
+  user_id       Int
+  cratedAt      DateTime  @default(now())
+  updateAt      DateTime  @updatedAt
+  comments      Comment[]
+
+  topics     Topic    @relation(fields: [topic_id], references: [id])
+  categories Category @relation(fields: [category_id], references: [id])
+  questions  Question @relation(fields: [question_id], references: [id])
+  choices    Choice   @relation(fields: [choice_id], references: [id])
+  users      Users    @relation(fields: [user_id], references: [id])
+}
+
+model Evidence_all {
+  id          Int      @id @default(autoincrement())
+  category_id Int
+  file_ev     String
+  hcode9      String
+  user_id     Int
+  cratedAt    DateTime @default(now())
+  updateAt    DateTime @updatedAt
+
+  categories Category @relation(fields: [category_id], references: [id])
+  users      Users    @relation(fields: [user_id], references: [id])
+}
+
+model Comment {
+  id             Int             @id @default(autoincrement())
+  evaluate_id    Int
+  user_id        Int
+  content        String?         @db.Text
+  image_name     String?
+  cratedAt       DateTime        @default(now())
+  updateAt       DateTime        @updatedAt
+  reply_comments Reply_comment[]
+
+  evaluates Evaluate @relation(fields: [evaluate_id], references: [id])
+  users     Users    @relation(fields: [user_id], references: [id])
+}
+
+model Reply_comment {
+  id         Int      @id @default(autoincrement())
+  comment_id Int
+  user_id    Int
+  content    String?  @db.Text
+  image_name String?
+  cratedAt   DateTime @default(now())
+
+  comments Comment @relation(fields: [comment_id], references: [id])
+  users    Users   @relation(fields: [user_id], references: [id])
+}
+
+model Notification {
+  id          Int      @id @default(autoincrement())
+  sender_id   Int
+  receiver_id Int
+  message     String
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Hospitals {
+  id                Int     @id @default(autoincrement())
+  hname_th          String
+  hcode9            String
+  hcode5            String
+  dept_type         String
+  medical_level     String?
+  use_status        String
+  sub_district_code String
+  sub_district      String
+  district_code     String
+  district          String
+  province_code     String
+  province          String
+  zone              String
+  zone_name         String
+  zipcode           String?
+}
+
+model LogEvent {
+  id           Int          @id @default(autoincrement())
+  event_rec_id Int
+  table_name   Lookup_table @default(None)
+  eventType    EventList    @default(none)
+  description  String?      @db.Text
+  detail       String?      @db.Text
+  user_id      Int
+  createdAt    DateTime     @default(now())
+
+  users Users @relation(fields: [user_id], references: [id])
+}
+
+enum EventList {
+  register
+  signin
+  signout
+  create
+  read
+  update
+  change_status
+  delete
+  upload
+  approve
+  unapprove
+  cancel
+  none
+}
+
+enum Lookup_table {
+  Users
+  Topic
+  Category
+  Question
+  Choice
+  Survey
+  Evidence_all
+  Comment
+  Reply_comment
+  Notification
+  Hospitals
+  None
+}
+
+enum Role {
+  admin
+  user
+}
+
+enum User_type {
+  Centre
+  Zone
+  Prov
+  Unit_service
+}
