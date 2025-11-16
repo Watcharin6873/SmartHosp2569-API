@@ -41,19 +41,21 @@ model Users {
   comments       Comment[]
   reply_comments Reply_comment[]
   log_events     LogEvent[]
+  sub_questions  Sub_quest[]
 }
 
 model Topic {
-  id         Int        @id @default(autoincrement())
-  topic_name String     @db.Text
-  user_id    Int
-  status     Boolean    @default(false)
-  cratedAt   DateTime   @default(now())
-  updateAt   DateTime   @updatedAt
-  questions  Question[]
-  choices    Choice[]
-  evaluates  Evaluate[]
-  categorys  Category[]
+  id            Int         @id @default(autoincrement())
+  topic_name    String      @db.Text
+  user_id       Int
+  status        Boolean     @default(false)
+  cratedAt      DateTime    @default(now())
+  updateAt      DateTime    @updatedAt
+  questions     Question[]
+  choices       Choice[]
+  evaluates     Evaluate[]
+  categorys     Category[]
+  sub_questions Sub_quest[]
 
   users Users @relation(fields: [user_id], references: [id])
 }
@@ -71,44 +73,65 @@ model Category {
   choices           Choice[]
   evaluates         Evaluate[]
   evidences         Evidence_all[]
+  sub_questions     Sub_quest[]
 
   topics Topic @relation(fields: [topic_id], references: [id], onDelete: Cascade)
   users  Users @relation(fields: [user_id], references: [id])
 }
 
 model Question {
-  id            Int        @id @default(autoincrement())
+  id            Int         @id @default(autoincrement())
   topic_id      Int
   category_id   Int
-  question_name String     @db.Text
+  question_name String      @db.Text
   user_id       Int
-  cratedAt      DateTime   @default(now())
-  updateAt      DateTime   @updatedAt
+  cratedAt      DateTime    @default(now())
+  updateAt      DateTime    @updatedAt
   choices       Choice[]
   evaluates     Evaluate[]
+  sub_questions Sub_quest[]
 
   topics     Topic    @relation(fields: [topic_id], references: [id], onDelete: Cascade)
   categories Category @relation(fields: [category_id], references: [id], onDelete: Cascade)
   users      Users    @relation(fields: [user_id], references: [id])
 }
 
-model Choice {
-  id          Int        @id @default(autoincrement())
-  topic_id    Int
-  category_id Int
-  question_id Int
-  choice_name String     @db.Text
-  score_1     Int        @default(0)
-  score_2     Int        @default(0)
-  user_id     Int
-  cratedAt    DateTime   @default(now())
-  updateAt    DateTime   @updatedAt
-  evaluates   Evaluate[]
+model Sub_quest {
+  id             Int      @id @default(autoincrement())
+  topic_id       Int
+  category_id    Int
+  question_id    Int
+  sub_quest_name String   @db.Text
+  user_id        Int
+  cratedAt       DateTime @default(now())
+  updateAt       DateTime @updatedAt
+  choices        Choice[]
 
-  topics     Topic    @relation(fields: [topic_id], references: [id], onDelete: Cascade)
-  categories Category @relation(fields: [category_id], references: [id], onDelete: Cascade)
-  questions  Question @relation(fields: [question_id], references: [id], onDelete: Cascade)
+  topics     Topic    @relation(fields: [topic_id], references: [id])
+  categories Category @relation(fields: [category_id], references: [id])
+  questions  Question @relation(fields: [question_id], references: [id])
   users      Users    @relation(fields: [user_id], references: [id])
+}
+
+model Choice {
+  id           Int        @id @default(autoincrement())
+  topic_id     Int
+  category_id  Int
+  question_id  Int
+  sub_quest_id Int
+  choice_name  String     @db.Text
+  score_1      Int        @default(0)
+  score_2      Int        @default(0)
+  user_id      Int
+  cratedAt     DateTime   @default(now())
+  updateAt     DateTime   @updatedAt
+  evaluates    Evaluate[]
+
+  topics     Topic     @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+  categories Category  @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  questions  Question  @relation(fields: [question_id], references: [id], onDelete: Cascade)
+  users      Users     @relation(fields: [user_id], references: [id])
+  subQuests  Sub_quest @relation(fields: [sub_quest_id], references: [id])
 }
 
 model Evaluate {
@@ -120,8 +143,7 @@ model Evaluate {
   status_check  Boolean   @default(false)
   hospital_code String
   hospital_name String
-  hospital_type String
-  alert_id      String?
+  hospital_type String 
   file_name     String?
   ssj_approve   Boolean   @default(false)
   zone_approve  Boolean   @default(false)
