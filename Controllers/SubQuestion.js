@@ -52,6 +52,24 @@ exports.getListSubQuestion = async (req, res) => {
     }
 }
 
+// Get list sub-question by category id
+exports.getListSubQuestionByQusetionId = async (req, res) => {
+    try {
+        // Code
+        const { question_id } = req.params;
+        const result = await prisma.sub_quest.findMany({
+            where: {
+                question_id: parseInt(question_id)
+            }
+        });
+
+        if (result) return res.status(200).json(result);
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: `Server error!!` })
+    }
+}
+
 // Get sub-question by id
 exports.getSubQuestionById = async (req, res) => {
     try {

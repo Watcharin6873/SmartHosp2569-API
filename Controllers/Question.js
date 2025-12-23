@@ -42,6 +42,23 @@ exports.getListQuestion = async (req, res) => {
     }
 }
 
+// Get list question by category id
+exports.getListQuestionByCatId = async (req, res) =>{
+    try {
+        const { category_id } = req.params;
+        const question = await prisma.question.findMany({
+            where: {
+                category_id: parseInt(category_id)
+            }
+        });
+
+        if (question) return res.status(200).json(question);
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: `Server error!` })
+    }
+}
+
 // Get question by id
 exports.getQuestionById = async (req, res) => {
     try {

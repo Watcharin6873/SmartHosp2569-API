@@ -21,7 +21,9 @@ exports.authCheck = async (req, res, next) => {
             email,
             name_th,
             hcode,
-            hcode9
+            hcode9,
+            user_type,
+            role
         } = req.user;
 
         const user = await prisma.users.findFirst({
@@ -29,7 +31,9 @@ exports.authCheck = async (req, res, next) => {
                 email: email,
                 name_th: name_th,
                 hcode: hcode,
-                hcode9: hcode9
+                hcode9: hcode9,
+                user_type: user_type,
+                role: role
             }
         })
 
@@ -57,7 +61,9 @@ exports.currentAdmin = async (req, res, next) =>{
             email,
             name_th,
             hcode,
-            hcode9
+            hcode9,
+            user_type,
+            role
         } = req.user;
 
         const adminUser = await prisma.users.findFirst({
@@ -65,7 +71,9 @@ exports.currentAdmin = async (req, res, next) =>{
                 email: email,
                 name_th: name_th,
                 hcode: hcode,
-                hcode9: hcode9
+                hcode9: hcode9,
+                user_type: user_type,
+                role: role
             }
         })
 

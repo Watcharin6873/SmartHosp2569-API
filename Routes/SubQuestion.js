@@ -4,6 +4,7 @@ const {
     createSubQuestion,
     getListSubQuestion,
     getSubQuestionById,
+    getListSubQuestionByQusetionId,
     updateSubQuestion,
     deleteSubQuestion
 } = require('../Controllers/SubQuestion');
@@ -14,6 +15,8 @@ router.post('/createSubQuestion', authCheck, currentAdmin, createSubQuestion);
 router.get('/getListSubQuestion', authCheck, getListSubQuestion);
 
 router.get('/getSubQuestionById/:id', authCheck, currentAdmin, getSubQuestionById);
+
+router.get('/getListSubQuestionByQusetionId/:question_id', authCheck, currentAdmin, getListSubQuestionByQusetionId);
 
 router.put('/updateSubQuestion', authCheck, currentAdmin, updateSubQuestion);
 

@@ -114,24 +114,31 @@ model Sub_quest {
 }
 
 model Choice {
-  id           Int        @id @default(autoincrement())
-  topic_id     Int
-  category_id  Int
-  question_id  Int
-  sub_quest_id Int
-  choice_name  String     @db.Text
-  score_1      Int        @default(0)
-  score_2      Int        @default(0)
-  user_id      Int
-  cratedAt     DateTime   @default(now())
-  updateAt     DateTime   @updatedAt
-  evaluates    Evaluate[]
+  id              Int      @id @default(autoincrement())
+  topic_id        Int
+  category_id     Int
+  question_id     Int
+  sub_question_id Int
+  user_id         Int
+  answers         Answer[]
+  cratedAt        DateTime @default(now())
+  updateAt        DateTime @updatedAt
 
-  topics     Topic     @relation(fields: [topic_id], references: [id], onDelete: Cascade)
-  categories Category  @relation(fields: [category_id], references: [id], onDelete: Cascade)
-  questions  Question  @relation(fields: [question_id], references: [id], onDelete: Cascade)
-  users      Users     @relation(fields: [user_id], references: [id])
-  subQuests  Sub_quest @relation(fields: [sub_quest_id], references: [id])
+  topics       Topic     @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+  categories   Category  @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  questions    Question  @relation(fields: [question_id], references: [id], onDelete: Cascade)
+  users        Users     @relation(fields: [user_id], references: [id])
+  subQuestions Sub_quest @relation(fields: [sub_question_id], references: [id])
+}
+
+model Answer {
+  id              Int    @id @default(autoincrement())
+  choice_id       Int
+  choice_text     String @db.Text
+  choice_value    Float
+  choice_required Float
+
+  choices Choice @relation(fields: [choice_id], references: [id])
 }
 
 model Evaluate {
@@ -143,7 +150,7 @@ model Evaluate {
   status_check  Boolean   @default(false)
   hospital_code String
   hospital_name String
-  hospital_type String 
+  hospital_type String
   file_name     String?
   ssj_approve   Boolean   @default(false)
   zone_approve  Boolean   @default(false)
@@ -154,8 +161,7 @@ model Evaluate {
 
   topics     Topic    @relation(fields: [topic_id], references: [id])
   categories Category @relation(fields: [category_id], references: [id])
-  questions  Question @relation(fields: [question_id], references: [id])
-  choices    Choice   @relation(fields: [choice_id], references: [id])
+  questions  Question @relation(fields: [question_id], references: [id]) 
   users      Users    @relation(fields: [user_id], references: [id])
 }
 

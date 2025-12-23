@@ -144,7 +144,9 @@ exports.loginSmartHosp = async (req, res) => {
             name_th,
             position,
             position_id,
-            title_th
+            title_th,
+            user_type,
+            role
         } = req.body;
 
         const user = await prisma.users.findFirst({
@@ -156,7 +158,9 @@ exports.loginSmartHosp = async (req, res) => {
                 name_th: name_th,
                 position: position,
                 position_id: position_id,
-                title_th: title_th
+                title_th: title_th,
+                user_type: user_type,
+                role: role
             }
         })
 
@@ -218,7 +222,9 @@ exports.currentUser = async (req, res) => {
             hcode,
             hcode9,
             name_th,
-            position_id
+            position_id,
+            user_type,
+            role
         } = req.user;
 
         const user = await prisma.users.findFirst({
@@ -227,7 +233,9 @@ exports.currentUser = async (req, res) => {
                 hcode: hcode,
                 hcode9: hcode9,
                 name_th: name_th,
-                position_id: position_id
+                position_id: position_id,
+                user_type: user_type,
+                role: role
             },
             select: {
                 email: true,
@@ -237,6 +245,7 @@ exports.currentUser = async (req, res) => {
                 hname_th: true,
                 position_id: true,
                 position: true,
+                user_type: true,
                 role: true
             }
         })
