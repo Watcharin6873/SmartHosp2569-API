@@ -11,6 +11,9 @@ app.use(morgan('dev'))
 app.use(bodyParser.json({limit:'20mb'}))
 app.use(cors())
 
+// Folder-upload-evident
+app.use('/api/questionnaire/evidence_files', express.static('evidence_files'))
+
 
 //Routing
 readdirSync('./Routes').map((r)=> app.use('/api/questionnaire', require('./Routes/'+r)))
