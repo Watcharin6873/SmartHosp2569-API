@@ -8,6 +8,7 @@ exports.createSubQuestion = async (req, res) => {
             topic_id,
             category_id,
             question_id,
+            question_type,
             sub_quest_name,
             user_id,
         } = req.body;
@@ -25,6 +26,7 @@ exports.createSubQuestion = async (req, res) => {
                 topic_id: parseInt(topic_id),
                 category_id: parseInt(category_id),
                 question_id: parseInt(question_id),
+                question_type: question_type,
                 sub_quest_name: sub_quest_name,
                 user_id: parseInt(user_id)
             }
@@ -98,6 +100,7 @@ exports.updateSubQuestion = async (req, res) => {
             topic_id,
             category_id,
             question_id,
+            question_type,
             sub_quest_name,
             user_id,
         } = req.body;
@@ -111,6 +114,7 @@ exports.updateSubQuestion = async (req, res) => {
                 category_id: parseInt(category_id),
                 question_id: parseInt(question_id),
                 sub_quest_name: sub_quest_name,
+                question_type: question_type,
                 user_id: parseInt(user_id),
                 updateAt: new Date()
             }

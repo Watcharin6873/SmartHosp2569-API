@@ -186,8 +186,9 @@ model EvaluateAnswer {
   choice_id       Int
   answer_id       Int // FK → Answer (คะแนนจริง)
 
-  answer_text String? @db.Text // กรณี has_text = true
-  score       Float // copy จาก answer.choice_value
+  answer_text     String? @db.Text // กรณี has_text = true
+  answer_value    Float
+  answer_required Float
 
   user_id Int
 
