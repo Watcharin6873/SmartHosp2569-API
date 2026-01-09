@@ -59,6 +59,27 @@ exports.getListChoices = async (req, res) => {
     }
 };
 
+// Get llist Choice by category ID
+exports.getListChoicesByCatId = async (req, res) =>{
+    try {
+        const { category_id } = req.query;
+        const choices = await prisma.choice.findMany({
+            where: {
+                category_id: parseInt(category_id)
+            },
+            include: {
+                answers: true
+            }
+        });
+
+        res.status(200).json(choices);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
 // Get list choices by sub-question ID
 exports.getListChoicesBySubQuestionId = async (req, res) => {
     try {

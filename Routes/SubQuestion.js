@@ -4,6 +4,7 @@ const {
     createSubQuestion,
     getListSubQuestion,
     getSubQuestionById,
+    getListSubQuestionByCatId,
     getListSubQuestionByQusetionId,
     updateSubQuestion,
     deleteSubQuestion
@@ -13,6 +14,8 @@ const {authCheck, currentAdmin} = require('../Middleware/Auth');
 router.post('/createSubQuestion', authCheck, currentAdmin, createSubQuestion);
 
 router.get('/getListSubQuestion', authCheck, getListSubQuestion);
+
+router.get('/getListSubQuestionByCatId', authCheck, getListSubQuestionByCatId);
 
 router.get('/getSubQuestionById/:id', authCheck, currentAdmin, getSubQuestionById);
 

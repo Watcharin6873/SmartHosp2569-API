@@ -4,6 +4,7 @@ const {
     createChoice,
     getListChoices,
     getChoiceById,
+    getListChoicesByCatId,
     getListChoicesBySubQuestionId,
     updateChoice,
     deleteChoice
@@ -13,6 +14,8 @@ const {authCheck, currentAdmin} = require('../Middleware/Auth');
 router.post('/createChoice', authCheck, currentAdmin, createChoice);
 
 router.get('/getListChoices', authCheck, getListChoices);
+
+router.get('/getListChoicesByCatId', authCheck, getListChoicesByCatId);
 
 router.get('/getChoiceById/:id', authCheck, currentAdmin, getChoiceById);
 
