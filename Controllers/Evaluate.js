@@ -203,3 +203,33 @@ exports.getDraftEvaluation = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 };
+
+// Get evaluate by ID
+exports.getEvaluationById = async (req, res) => {
+    try {
+        const { evaluate_id } = req.params;
+
+        if (!evaluate_id) {
+            return res.status(400).json({ error: 'evaluate_id จำเป็นต้องมี' });
+        }
+
+        const result = await prisma.evaluate.findUnique({
+            where: {
+                id: parseInt(evaluate_id)
+            },
+            include: {
+                evaluateAnswers: true
+            }
+        });
+
+        if (!result) {
+            return res.status(404).json({ error: 'ไม่พบการประเมิน' });
+        }
+
+        res.status(200).json(result);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
