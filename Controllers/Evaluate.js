@@ -14,7 +14,7 @@ exports.createEvaluation = async (req, res) => {
             answers
         } = req.body;
 
-        // console.log('Received evaluation data:', req.body);
+        console.log('Payload frontend: ', req.body);
 
         // 🔐 ปกติควรอ่านจาก JWT
         const user_id = req.body.user_id;
@@ -99,59 +99,53 @@ exports.createEvaluation = async (req, res) => {
                 });
             }
 
-            // 2. INSERT Evaluate Answers
-            for (const item of answers) {
-                // 🔒 ดึง Answer จริง เพื่อกันโกงคะแนน
-                const answer = await tx.answer.findUnique({
-                    where: { id: parseInt(item.answer_id) }
-                });
+            // 2. INSERT / UPDATE Evaluate Answers (รองรับ checkbox)
+            const grouped = answers.reduce((acc, item) => {
+                if (!acc[item.sub_question_id]) acc[item.sub_question_id] = [];
+                acc[item.sub_question_id].push(item);
+                return acc;
+            }, {});
 
-                if (!answer) {
-                    throw new Error(`Answer ID ${item.answer_id} ไม่ถูกต้อง`);
-                }
+            for (const subQuestionId in grouped) {
+                const items = grouped[subQuestionId];
 
-                if (!item.choice_id) {
-                    throw new Error(`choice_id missing at sub_question ${item.sub_question_id}`);
-                }
-
-                const existing = await tx.evaluateAnswer.findFirst({
+                // 🔥 ลบคำตอบเดิมของ sub_question นี้ (radio + checkbox)
+                await tx.evaluateAnswer.deleteMany({
                     where: {
-                        sub_question_id: parseInt(item.sub_question_id)
+                        evaluate_id: evaluate.id,
+                        sub_question_id: parseInt(subQuestionId)
                     }
                 });
 
-                if (existing) {
-                    await tx.evaluateAnswer.update({
-                        where: { id: existing.id },
-                        data: {
-                            evaluate_id: evaluate.id,
-                            topic_id: parseInt(topic_id),
-                            category_id: parseInt(category_id),
-                            question_id: parseInt(question_id),
-                            sub_question_id: item.sub_question_id ? parseInt(item.sub_question_id) : null,
-                            choice_id: parseInt(item.choice_id),
-                            answer_id: parseInt(item.answer_id),
-                            answer_text: item.answer_text || null,
-                            answer_value: answer.choice_value,
-                            answer_required: answer.choice_required,
-                            user_id: parseInt(user_id),
-                            updateAt: new Date()
-                        }
-                    })
-                } else {
-                    // No existing answer, proceed to create
+                // 🔁 insert ใหม่ทั้งหมด
+                for (const item of items) {
+                    const answer = await tx.answer.findUnique({
+                        where: { id: parseInt(item.answer_id) }
+                    });
+
+                    if (!answer) {
+                        throw new Error(`Answer ID ${item.answer_id} ไม่ถูกต้อง`);
+                    }
+
+                    if (!item.choice_id) {
+                        throw new Error(`choice_id missing at sub_question ${subQuestionId}`);
+                    }
+
                     await tx.evaluateAnswer.create({
                         data: {
                             evaluate_id: evaluate.id,
                             topic_id: parseInt(topic_id),
                             category_id: parseInt(category_id),
                             question_id: parseInt(question_id),
-                            sub_question_id: item.sub_question_id ? parseInt(item.sub_question_id) : null,
+                            sub_question_id: parseInt(subQuestionId),
                             choice_id: parseInt(item.choice_id),
                             answer_id: parseInt(item.answer_id),
                             answer_text: item.answer_text || null,
+
+                            // 🔒 ใช้ค่าจาก Answer จริง ป้องกันโกง
                             answer_value: answer.choice_value,
                             answer_required: answer.choice_required,
+
                             user_id: parseInt(user_id)
                         }
                     });
@@ -173,7 +167,7 @@ exports.createEvaluation = async (req, res) => {
     }
 }
 
-// Get draft evaluate
+// Get evaluate data
 exports.getDraftEvaluation = async (req, res) => {
     try {
         const { question_id, hospital_code } = req.query;
@@ -191,7 +185,11 @@ exports.getDraftEvaluation = async (req, res) => {
                 updateAt: 'desc' // ⭐ สำคัญมาก
             },
             include: {
-                evaluateAnswers: true
+                evaluateAnswers: {
+                    include: {
+                        subQuestions: true,
+                    }
+                }
             }
         });
 

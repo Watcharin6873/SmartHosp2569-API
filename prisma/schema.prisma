@@ -176,8 +176,7 @@ model Evaluate {
 }
 
 model EvaluateAnswer {
-  id Int @id @default(autoincrement())
-
+  id              Int      @id @default(autoincrement())
   evaluate_id     Int // FK → Evaluate
   topic_id        Int
   category_id     Int
@@ -185,15 +184,12 @@ model EvaluateAnswer {
   sub_question_id Int?
   choice_id       Int
   answer_id       Int // FK → Answer (คะแนนจริง)
-
-  answer_text     String? @db.Text // กรณี has_text = true
+  answer_text     String?  @db.Text // กรณี has_text = true
   answer_value    Float
   answer_required Float
-
-  user_id Int
-
-  cratedAt DateTime @default(now())
-  updateAt DateTime @updatedAt
+  user_id         Int
+  cratedAt        DateTime @default(now())
+  updateAt        DateTime @updatedAt
 
   // relations
   evaluates    Evaluate   @relation(fields: [evaluate_id], references: [id], onDelete: Cascade)
