@@ -284,6 +284,22 @@ model LogEvent {
   users Users @relation(fields: [user_id], references: [id])
 }
 
+model Cyber_risk_level {
+  id              Int      @id @default(autoincrement())
+  hcode5          String?
+  hcode9          String?
+  province        String
+  hname_th        String
+  hosp_level      String
+  cyber_level     String
+  cyber_levelname String
+  zone_name       String
+  supplier        String
+  usersId         Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
 enum EventList {
   register
   signin

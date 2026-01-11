@@ -47,6 +47,7 @@ exports.getListChoices = async (req, res) => {
         // Code
         const choices = await prisma.choice.findMany({
             include: {
+                subQuestions: true,
                 answers: true
             }
         });
