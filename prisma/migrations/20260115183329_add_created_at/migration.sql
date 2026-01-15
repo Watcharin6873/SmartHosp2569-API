@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `Evidence_sub_id` MODIFY `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3);

@@ -202,6 +202,41 @@ exports.getDraftEvaluation = async (req, res) => {
     }
 };
 
+// Get evaluation by cat id 
+exports.getEvaluationByCatId= async (req, res) => {
+    try {
+        const { category_id, hospital_code } = req.query;
+
+        if (!category_id || !hospital_code) {
+            return res.status(400).json({ error: 'question_id และ hospital_code จำเป็นต้องมี' });
+        }
+
+        const result = await prisma.evaluate.findMany({
+            where: {
+                category_id: parseInt(category_id),
+                hospital_code: hospital_code
+            },
+            orderBy: {
+                updateAt: 'desc' // ⭐ สำคัญมาก
+            },
+            include: {
+                evaluateAnswers: {
+                    include: {
+                        subQuestions: true,
+                    }
+                }
+            }
+        });
+
+        // ไม่มีข้อมูล → ส่ง null ให้ frontend
+        res.status(200).json(result);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
 // Get evaluate by ID
 exports.getEvaluationById = async (req, res) => {
     try {

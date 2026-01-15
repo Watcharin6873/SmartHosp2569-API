@@ -10,6 +10,7 @@ exports.createSubQuestion = async (req, res) => {
             question_id,
             question_type,
             sub_quest_name,
+            is_required,
             user_id,
         } = req.body;
 
@@ -28,6 +29,7 @@ exports.createSubQuestion = async (req, res) => {
                 question_id: parseInt(question_id),
                 question_type: question_type,
                 sub_quest_name: sub_quest_name,
+                is_required: Boolean(is_required),
                 user_id: parseInt(user_id)
             }
         });
@@ -119,6 +121,7 @@ exports.updateSubQuestion = async (req, res) => {
             question_id,
             question_type,
             sub_quest_name,
+            is_required,
             user_id,
         } = req.body;
 
@@ -132,6 +135,7 @@ exports.updateSubQuestion = async (req, res) => {
                 question_id: parseInt(question_id),
                 sub_quest_name: sub_quest_name,
                 question_type: question_type,
+                is_required: Boolean(is_required),
                 user_id: parseInt(user_id),
                 updateAt: new Date()
             }

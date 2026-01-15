@@ -42,7 +42,7 @@ exports.getListEvidence = async (req, res) =>{
     }
 }
 
-// Get All Evidence Files
+// Get Evidence Files By Cat ID
 exports.getEvidenceFiles = async (req, res) => {
     try {
         // Code
@@ -85,3 +85,73 @@ exports.removeEvidenceFile = async (req, res) =>{
     }
 }
 
+// Upload evidence file by sub id
+exports.uploadEvidenceBySubId = async (req, res) =>{
+    try {
+        // Code
+        const data =req.body;
+        data.ev_filename = req.file.filename;
+        console.log('Data: ', data);
+
+        const evidence = await prisma.evidence_sub_id.create({
+            data: {
+                evaluate_id: parseInt(data.evaluate_id),
+                sub_question_id: parseInt(data.sub_question_id),
+                evaluate_answer_id: parseInt(data.evaluate_answer_id),
+                hcode9: data.hcode9,
+                ev_filename: data.ev_filename,
+                user_id: parseInt(data.user_id)
+            }
+        });
+
+        if (evidence) return res.status(200).json({
+            message: `Upload file สำเร็จ!!`,
+            filename: req.file.filename
+        });
+
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: `Server error!` })
+    }
+}
+
+// Get list evidence by hcode
+exports.getListEvidenceByHcode9 = async (req, res) =>{
+    try {
+        // Code
+        const {hcode9} = req.query;
+
+        const result = await prisma.evidence_sub_id.findMany({
+            where:{hcode9: hcode9}
+        });
+
+        if (result) return res.status(200).json(result)
+
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: `Server error!` })
+    }
+}
+
+// Remove evidence_sub_id file by id
+exports.removeEvidenceSubIdById = async (req, res) =>{
+    try {
+        // Code
+        const {id} = req.params;
+        const find = await prisma.evidence_sub_id.findFirst({
+            where: { id: parseInt(id) }
+        });
+
+        fs.unlinkSync(`evidence_subid/${find.ev_filename}`);
+
+        const removed = await prisma.evidence_sub_id.delete({
+            where:{ id: parseInt(id) }
+        });
+
+        if (removed) return res.status(200).json({message: `ลบหลักฐานเรียบร้อย!!`});
+
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: `Server error!` })
+    }
+}

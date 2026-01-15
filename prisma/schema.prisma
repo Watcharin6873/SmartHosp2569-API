@@ -107,6 +107,7 @@ model Sub_quest {
   question_id    Int
   question_type  QuestionType @default(radio) // 👈 เพิ่ม
   sub_quest_name String       @db.Text
+  is_required    Boolean      @default(false)
   user_id        Int
   cratedAt       DateTime     @default(now())
   updateAt       DateTime     @updatedAt
@@ -215,6 +216,18 @@ model Evidence_all {
 
   categories Category @relation(fields: [category_id], references: [id])
   users      Users    @relation(fields: [user_id], references: [id])
+}
+
+model Evidence_sub_id {
+  id                 Int      @id @default(autoincrement())
+  evaluate_id        Int
+  sub_question_id    Int
+  evaluate_answer_id Int
+  hcode9             String
+  ev_filename        String
+  user_id            Int
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 model Comment {

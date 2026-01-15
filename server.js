@@ -13,6 +13,7 @@ app.use(cors())
 
 // Folder-upload-evident
 app.use('/api/questionnaire/evidence_files', express.static('evidence_files'))
+app.use('/api/questionnaire/evidence_subid', express.static('evidence_subid'))
 
 
 //Routing
