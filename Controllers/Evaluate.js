@@ -1,4 +1,5 @@
 const prisma = require('../Config/Prisma');
+const {Prisma} = require('@prisma/client');
 
 // Create Evaluation
 exports.createEvaluation = async (req, res) => {
@@ -161,6 +162,29 @@ exports.createEvaluation = async (req, res) => {
             is_draft: result.is_draft
         });
 
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
+// Get list hospitals evaluation
+exports.getListHospitalsInEvaluation = async (req, res) =>{
+    try {
+        // Code
+        const listType = ['โรงพยาบาลศูนย์', 'โรงพยาบาลทั่วไป', 'โรงพยาบาลชุมชน', 'หน่วยงานทดสอบ']; //, 'หน่วยงานทดสอบ'
+        const listHcode9 = ['EA0053964', 'EA0043735', 'EA0052478'];
+        const results = await prisma.$queryRaw`
+            SELECT DISTINCT 
+                t2.zone, t2.zone_name, t2.province, t1.hospital_code, 
+                t1.hospital_name, t1.hospital_type, t1.category_id
+            FROM Evaluate AS t1 
+            INNER JOIN Hospitals AS t2 
+            ON t1.hospital_code = t2.hcode9
+            WHERE t1.hospital_type IN ('โรงพยาบาลศูนย์', 'โรงพยาบาลทั่วไป', 'โรงพยาบาลชุมชน', 'หน่วยงานทดสอบ') 
+            AND t2.hcode9 NOT IN ('EA0053964', 'EA0043735', 'EA0052478') AND t1.is_draft = 0
+        `;
+        if (results) return res.status(200).json(results)
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Internal server error' });

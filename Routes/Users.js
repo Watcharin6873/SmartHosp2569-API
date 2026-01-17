@@ -16,15 +16,15 @@ const {
 
 router.post('/saveRegister', saveRegister)
 
-router.get('/getListUsers', authCheck, currentAdmin, getListUsers)
+router.get('/getListUsers', authCheck, getListUsers)
 
-router.put('/changeUserType',  authCheck, currentAdmin, changeUserType)
+router.put('/changeUserType',  authCheck, changeUserType)
 
-router.put('/changeUserRole', authCheck, currentAdmin, changeUserRole)
+router.put('/changeUserRole', authCheck, changeUserRole)
 
-router.put('/changeUserStatus', authCheck, currentAdmin, changeUserStatus)
+router.put('/changeUserStatus', authCheck, changeUserStatus)
 
-router.delete('/deleteUser/:userId', authCheck, currentAdmin, deleteUser)
+router.delete('/deleteUser/:userId', authCheck, deleteUser)
 
 
 module.exports = router;
