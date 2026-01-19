@@ -77,9 +77,10 @@ model Category {
   evidences         Evidence_all[]
   sub_questions     Sub_quest[]
 
-  topics          Topic            @relation(fields: [topic_id], references: [id], onDelete: Cascade)
-  users           Users            @relation(fields: [user_id], references: [id])
+  topics          Topic             @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+  users           Users             @relation(fields: [user_id], references: [id])
   evaluateAnswers EvaluateAnswer[]
+  approveAnswers  Approve_answers[]
 }
 
 model Question {
@@ -94,10 +95,11 @@ model Question {
   evaluates     Evaluate[]
   sub_questions Sub_quest[]
 
-  topics          Topic            @relation(fields: [topic_id], references: [id], onDelete: Cascade)
-  categories      Category         @relation(fields: [category_id], references: [id], onDelete: Cascade)
-  users           Users            @relation(fields: [user_id], references: [id])
+  topics          Topic             @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+  categories      Category          @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  users           Users             @relation(fields: [user_id], references: [id])
   evaluateAnswers EvaluateAnswer[]
+  approveAnswers  Approve_answers[]
 }
 
 model Sub_quest {
@@ -113,11 +115,12 @@ model Sub_quest {
   updateAt       DateTime     @updatedAt
   choices        Choice[]
 
-  topics          Topic            @relation(fields: [topic_id], references: [id])
-  categories      Category         @relation(fields: [category_id], references: [id])
-  questions       Question         @relation(fields: [question_id], references: [id])
-  users           Users            @relation(fields: [user_id], references: [id])
+  topics          Topic             @relation(fields: [topic_id], references: [id])
+  categories      Category          @relation(fields: [category_id], references: [id])
+  questions       Question          @relation(fields: [question_id], references: [id])
+  users           Users             @relation(fields: [user_id], references: [id])
   evaluateAnswers EvaluateAnswer[]
+  approveAnswers  Approve_answers[]
 }
 
 model Choice {
@@ -169,11 +172,12 @@ model Evaluate {
   updateAt      DateTime  @updatedAt
   comments      Comment[]
 
-  topics          Topic            @relation(fields: [topic_id], references: [id])
-  categories      Category         @relation(fields: [category_id], references: [id])
-  questions       Question         @relation(fields: [question_id], references: [id])
-  users           Users            @relation(fields: [user_id], references: [id])
+  topics          Topic             @relation(fields: [topic_id], references: [id])
+  categories      Category          @relation(fields: [category_id], references: [id])
+  questions       Question          @relation(fields: [question_id], references: [id])
+  users           Users             @relation(fields: [user_id], references: [id])
   evaluateAnswers EvaluateAnswer[]
+  approveAnswers  Approve_answers[]
 }
 
 model EvaluateAnswer {
@@ -228,6 +232,25 @@ model Evidence_sub_id {
   user_id            Int
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
+}
+
+model Approve_answers {
+  id              Int      @id @default(autoincrement())
+  evaluate_id     Int
+  category_id     Int
+  question_id     Int
+  sub_question_id Int
+  hospital_code   String
+  prov_approve    Boolean  @default(false)
+  zone_approve    Boolean  @default(false)
+  user_id         Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  evaluates     Evaluate  @relation(fields: [evaluate_id], references: [id])
+  questions     Question  @relation(fields: [question_id], references: [id])
+  sub_questions Sub_quest @relation(fields: [sub_question_id], references: [id])
+  categories    Category  @relation(fields: [category_id], references: [id])
 }
 
 model Comment {
