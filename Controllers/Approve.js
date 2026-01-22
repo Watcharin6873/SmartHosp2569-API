@@ -1,5 +1,6 @@
 const prisma = require('../Config/Prisma');
 
+// Prov approved
 exports.provApproveEvaluation = async (req, res) => {
     try {
         // Code
@@ -65,6 +66,53 @@ exports.provApproveEvaluation = async (req, res) => {
     }
 }
 
+// Zone approved
+exports.zoneApproveEvaluation = async (req, res) => {
+    try {
+        // Code
+        const {
+            newChecked,
+            hospital_code
+        } = req.body;
+
+        // ✅ Validate input
+        if (typeof newChecked !== "boolean" || !hospital_code) {
+            return res.status(400).json({
+                message: "newChecked ต้องเป็น boolean และต้องส่ง hospital_code"
+            });
+        }
+
+        const result = await prisma.approve_answers.updateMany({
+            where: {
+                hospital_code: hospital_code
+            },
+            data: {
+                zone_approve: newChecked,
+                updatedAt: new Date()
+            }
+        });
+
+        // ✅ ไม่พบข้อมูลที่ตรงเงื่อนไข
+        if (result.count === 0) {
+            return res.status(404).json({
+                message: `ไม่พบข้อมูลของโรงพยาบาล ${hospital_code}`
+            });
+        }
+
+        // ✅ สำเร็จ
+        return res.status(200).json({
+            message: newChecked
+                ? `อนุมัติผลการประเมินของ ${hospital_code} แล้ว!!`
+                : `ยกเลิกการอนุมัติผลการประเมินของ ${hospital_code} แล้ว!!`,
+            updated: result.count
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
 exports.provUpdateApproveEvaluation = async (req, res) => {
     try {
         // Code
@@ -101,7 +149,7 @@ exports.getProvAndZoneApprove = async (req, res) => {
         // Code
         const results = await prisma.$queryRaw`
             SELECT
-                t2.zone, t2.zone_name, t2.province,
+                t2.zone, t2.zone_name, t2.province_code, t2.province,
                 t1.hospital_code,t2.hname_th AS hospital_name, t2.dept_type AS hospital_type,
                 CAST(COUNT(CASE WHEN (t1.prov_approve = 1 AND t1.category_id = 2) THEN 1 END) AS SIGNED) AS prov_approvedCat1,
                 CAST(COUNT(CASE WHEN (t1.prov_approve = 0 AND t1.category_id = 2) THEN 1 END) AS SIGNED) AS prov_penddingCat1,
@@ -122,7 +170,7 @@ exports.getProvAndZoneApprove = async (req, res) => {
             FROM Approve_answers AS t1
             INNER JOIN Hospitals AS t2 
             ON t1.hospital_code = t2.hcode9
-            GROUP BY t2.zone, t2.zone_name, t2.province, t1.hospital_code,t2.hname_th, t2.dept_type
+            GROUP BY t2.zone, t2.zone_name, t2.province_code, t2.province, t1.hospital_code,t2.hname_th, t2.dept_type
         `;
 
         const safeResults = JSON.parse(

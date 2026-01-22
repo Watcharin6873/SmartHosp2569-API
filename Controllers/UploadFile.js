@@ -44,23 +44,38 @@ exports.getListEvidence = async (req, res) =>{
 
 // Get Evidence Files By Cat ID
 exports.getEvidenceFiles = async (req, res) => {
-    try {
-        // Code
-        const {hcode9, category_id} = req.query;
-        const results = await prisma.evidence_all.findFirst({
-            where: {
-                hcode9: hcode9,
-                category_id: parseInt(category_id)
-            }
-        });
-        
-        if (results) return res.status(200).json(results);
+  try {
+    const { hcode9, category_id } = req.query;
 
-    } catch (err) {
-        console.log(err);
-        res.status(500).json({ message: `Server error!` })
+    if (!hcode9 || !category_id) {
+      return res.status(400).json({
+        message: "Missing hcode9 or category_id"
+      });
     }
-}
+
+    const results = await prisma.evidence_all.findFirst({
+      where: {
+        hcode9: hcode9,
+        category_id: parseInt(category_id)
+      }
+    });
+
+    // ✅ กรณีไม่พบข้อมูล
+    if (!results) {
+      return res.status(200).json(null); 
+      // หรือถ้าอยากให้เป็น array
+      // return res.status(200).json([]);
+    }
+
+    // ✅ กรณีพบข้อมูล
+    return res.status(200).json(results);
+
+  } catch (err) {
+    console.error("getEvidenceFiles error:", err);
+    return res.status(500).json({ message: "Server error!" });
+  }
+};
+
 
 // Remove evidence file
 exports.removeEvidenceFile = async (req, res) =>{

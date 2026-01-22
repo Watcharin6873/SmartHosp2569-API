@@ -9,4 +9,6 @@ const {
 
 router.get('/getListHospitals', authCheck, getListHospitals);
 
+router.get('/getListHospForDashboard', getListHospitals);
+
 module.exports = router

@@ -4,13 +4,16 @@ const {
     provApproveEvaluation,
     provUpdateApproveEvaluation,
     getProvApproveEvaluation,
-    getProvAndZoneApprove
+    getProvAndZoneApprove,
+    zoneApproveEvaluation
 } = require('../Controllers/Approve');
 const { authCheck } = require('../Middleware/Auth');
 
 router.post('/provApproveEvaluation', authCheck, provApproveEvaluation);
 
 router.put('/provUpdateApproveEvaluation', authCheck, provUpdateApproveEvaluation);
+
+router.put('/zoneApproveEvaluation', authCheck, zoneApproveEvaluation);
 
 router.get('/getProvApproveEvaluation', authCheck, getProvApproveEvaluation);
 

@@ -5,7 +5,8 @@ const {
     getDraftEvaluation, 
     getEvaluationById,
     getEvaluationByCatId,
-    getListHospitalsInEvaluation
+    getListHospitalsInEvaluation,
+    getListHospitalsInEvaluation2
 } = require('../Controllers/Evaluate');
 const { authCheck } = require('../Middleware/Auth');
 
@@ -20,5 +21,7 @@ router.get('/getEvaluationByCatId', authCheck, getEvaluationByCatId);
 router.get('/getEvaluationById/:id', authCheck, getEvaluationById);
 
 router.get('/getListHospitalsInEvaluation', authCheck, getListHospitalsInEvaluation);
+
+router.get('/getListHospitalsInEvaluation2', authCheck, getListHospitalsInEvaluation2);
 
 module.exports = router;
