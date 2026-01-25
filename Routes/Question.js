@@ -19,7 +19,7 @@ router.get('/getListQuestion',getListQuestion);
 
 router.get('/getQuestionById/:id', authCheck, currentAdmin, getQuestionById);
 
-router.get('/getListQuestionByCatId/:category_id', authCheck, currentAdmin, getListQuestionByCatId);
+router.get('/getListQuestionByCatId/:category_id', authCheck, getListQuestionByCatId);
 
 router.put('/updateQuestion', authCheck, currentAdmin, updateQuestion);
 

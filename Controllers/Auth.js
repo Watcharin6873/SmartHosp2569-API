@@ -161,6 +161,9 @@ exports.loginSmartHosp = async (req, res) => {
                 title_th: title_th,
                 user_type: user_type,
                 role: role
+            },
+            include: {
+                hospitals: true
             }
         })
 
@@ -177,6 +180,7 @@ exports.loginSmartHosp = async (req, res) => {
                     hcode9: user.hcode9,
                     hname_th: user.hname_th,
                     district: user.district,
+                    province_code: user.hospitals.province_code,
                     province: user.province,
                     zone: user.zone,
                     role: user.role,
@@ -218,22 +222,16 @@ exports.currentUser = async (req, res) => {
     try {
         // Code
         const {
-            email,
-            hcode,
-            hcode9,
-            name_th,
-            position_id,
+            email, 
+            hcode9, 
             user_type,
             role
         } = req.user;
 
         const user = await prisma.users.findFirst({
             where: {
-                email: email,
-                hcode: hcode,
-                hcode9: hcode9,
-                name_th: name_th,
-                position_id: position_id,
+                email: email, 
+                hcode9: hcode9, 
                 user_type: user_type,
                 role: role
             },

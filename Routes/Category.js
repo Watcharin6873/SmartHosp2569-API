@@ -11,7 +11,7 @@ const { authCheck, currentAdmin } = require('../Middleware/Auth');
 
 router.post('/createCategory', authCheck, currentAdmin, createCategory);
 
-router.get('/getListCategory', authCheck, currentAdmin, getListCategory);
+router.get('/getListCategory', authCheck, getListCategory);
 
 router.get('/getCategoryById/:id', authCheck, currentAdmin, getCategoryById);
 

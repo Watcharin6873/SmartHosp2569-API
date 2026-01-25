@@ -1,5 +1,5 @@
 const prisma = require('../Config/Prisma');
-const {Prisma} = require('@prisma/client');
+const { Prisma } = require('@prisma/client');
 
 // Create Evaluation
 exports.createEvaluation = async (req, res) => {
@@ -169,7 +169,7 @@ exports.createEvaluation = async (req, res) => {
 }
 
 // Get list hospitals evaluation
-exports.getListHospitalsInEvaluation = async (req, res) =>{
+exports.getListHospitalsInEvaluation = async (req, res) => {
     try {
         // Code
         const listType = ['โรงพยาบาลศูนย์', 'โรงพยาบาลทั่วไป', 'โรงพยาบาลชุมชน', 'หน่วยงานทดสอบ']; //, 'หน่วยงานทดสอบ'
@@ -192,7 +192,7 @@ exports.getListHospitalsInEvaluation = async (req, res) =>{
 }
 
 // Get list hospitals evaluation
-exports.getListHospitalsInEvaluation2 = async (req, res) =>{
+exports.getListHospitalsInEvaluation2 = async (req, res) => {
     try {
         // Code
         const listType = ['โรงพยาบาลศูนย์', 'โรงพยาบาลทั่วไป', 'โรงพยาบาลชุมชน', 'หน่วยงานทดสอบ']; //, 'หน่วยงานทดสอบ'
@@ -250,7 +250,7 @@ exports.getDraftEvaluation = async (req, res) => {
 };
 
 // Get evaluation by cat id 
-exports.getEvaluationByCatId= async (req, res) => {
+exports.getEvaluationByCatId = async (req, res) => {
     try {
         const { category_id, hospital_code } = req.query;
 
@@ -313,3 +313,68 @@ exports.getEvaluationById = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 };
+
+// Request for edit evaluation
+exports.requestForEditEvaluation = async (req, res) => {
+    try {
+        // Code
+        const {
+            question_id,
+            hcode9,
+            user_id,
+            is_draft
+        } = req.body;
+
+        // ✅ Validation ที่ถูกต้อง
+        if (!question_id || !hcode9 || !user_id || typeof is_draft !== "boolean") {
+            return res.status(400).json({ message: "Invalid request data" });
+        }
+
+        // ✅ อัปเดตข้อมูล
+        const updated = await prisma.evaluate.updateMany({
+            where: {
+                question_id: parseInt(question_id),
+                hospital_code: hcode9
+            },
+            data: {
+                is_draft: Boolean(is_draft),
+                user_id: parseInt(user_id),
+                updateAt: new Date()
+            }
+        });
+
+        // ✅ ไม่มีแถวถูกอัปเดต
+        if (updated.count === 0) {
+            return res.status(404).json({
+                message: "ไม่พบแบบประเมินที่ต้องการแก้ไข"
+            });
+        }
+
+        // ✅ Log event
+        await prisma.logEvent.create({
+            data: {
+                event_rec_id: parseInt(user_id),
+                table_name: "Evaluate",
+                eventType: is_draft ? "request_edit" : "cancel_edit",
+                description: is_draft
+                    ? "ขอแก้ไขแบบประเมิน"
+                    : "ยกเลิกการขอแก้ไขแบบประเมิน",
+                detail: `ผู้ใช้งานรหัส ${user_id} ${is_draft ? "ขอแก้ไข" : "ยกเลิกการขอแก้ไข"
+                    } แบบประเมินของ ${hcode9} คำถามหลักรหัส ${question_id}`,
+                user_id: parseInt(user_id)
+            }
+        });
+
+        return res.status(200).json({
+            message: `ดำเนินการ${is_draft ? "ขอแก้ไข" : "ยกเลิกการขอแก้ไข"
+                }แบบประเมินของ ${hcode9} สำเร็จ`,
+            success: true,
+            question_id: Number(question_id),
+            is_draft: is_draft
+        });
+
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}

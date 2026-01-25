@@ -5,7 +5,8 @@ const {
     getResultScoreAllCat,
     getReportAllCatByHcode9,
     getCyberLevelByHosp,
-    getCyberLevel
+    getCyberLevel,
+    monitorLogEventByUserId
 } = require('../Controllers/Report');
 const {authCheck} = require('../Middleware/Auth');
 
@@ -20,6 +21,8 @@ router.get('/getCyberLevelByHosp', authCheck, getCyberLevelByHosp);
 router.get('/getCyberLevel', authCheck, getCyberLevel);
 
 router.get('/getCyberLevelForDashboard', getCyberLevel);
+
+router.get('/monitorLogEventByUserId',authCheck, monitorLogEventByUserId);
 
 
 module.exports = router;

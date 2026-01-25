@@ -1,5 +1,17 @@
 const prisma = require('../Config/Prisma');
 
+function toThaiTime(date) {
+    return new Date(date).toLocaleString("th-TH", {
+        timeZone: "Asia/Bangkok",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+    });
+}
+
 // Report all category for home dashboard
 exports.getResultScoreAllCat = async (req, res) => {
     try {
@@ -153,7 +165,7 @@ exports.getReportAllCatByHcode9 = async (req, res) => {
             FROM EvaluateAnswer AS t1
             INNER JOIN Evaluate AS t2
             ON t1.evaluate_id = t2.id
-            WHERE t1.category_id IN (2,3,5) AND t2.hospital_code = ${hcode9}
+            WHERE t1.category_id IN (2,3,5) AND t2.hospital_code = ${hcode9} AND t2.is_draft = 0
             GROUP BY t2.hospital_code,t2.hospital_name,t1.category_id
             UNION ALL
             SELECT 
@@ -174,7 +186,7 @@ exports.getReportAllCatByHcode9 = async (req, res) => {
                 FROM EvaluateAnswer AS t1
                 INNER JOIN Evaluate AS t2
                 ON t1.evaluate_id = t2.id
-                WHERE t1.category_id = 4 AND t2.hospital_code = ${hcode9} 
+                WHERE t1.category_id = 4 AND t2.hospital_code = ${hcode9} AND t2.is_draft = 0
                 AND t1.sub_question_id NOT IN (
                 '113','114','115','116','117',
                 '118','119','120','121','125',
@@ -192,7 +204,7 @@ exports.getReportAllCatByHcode9 = async (req, res) => {
                 FROM EvaluateAnswer AS t1
                 INNER JOIN Evaluate AS t2
                 ON t1.evaluate_id = t2.id
-                WHERE t1.category_id = 4 AND t2.hospital_code = ${hcode9}
+                WHERE t1.category_id = 4 AND t2.hospital_code = ${hcode9} AND t2.is_draft = 0
                 AND t1.sub_question_id IN (
                 '113','114','115','116','117',
                 '118','119','120','121','125',
@@ -262,6 +274,30 @@ exports.getCyberLevel = async (req, res) => {
         });
 
         if (result) return res.status(200).json(result);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error!.' });
+    }
+}
+
+exports.monitorLogEventByUserId = async (req, res) => {
+    try {
+        // Code
+        const { usersId } = req.query;
+
+        const data = await prisma.logEvent.findMany({
+            where: {
+                user_id: Number(usersId)
+            }
+        })
+
+        const result = data.map(item => ({
+            ...item,
+            createdAtTH: toThaiTime(item.createdAt)
+        }))
+
+        res.json(result)
 
     } catch (err) {
         console.error(err);
