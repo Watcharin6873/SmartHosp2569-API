@@ -297,7 +297,7 @@ model ChatRoom {
   topics        Topic              @relation(fields: [topic_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_chatroom_topic")
   members       ChatRoomMember[]
 
-  @@unique([topic_id, room_type, province_code, zone_code], map: "uq_chatroom")
+  @@unique([topic_id, room_type, hcode9, province_code, zone_code], map: "uq_chatroom_v2")
 }
 
 model ChatRoomMember {
@@ -306,7 +306,7 @@ model ChatRoomMember {
   user_id  Int
   hcode9   String   @db.VarChar(20)
   joinedAt DateTime @default(now()) @db.DateTime(0)
-  room     ChatRoom @relation(fields: [room_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_chatroommember_room")
+  room     ChatRoom @relation(fields: [room_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_chatroommember_room")
   user     Users    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_chatroommember_user")
 
   @@unique([room_id, user_id], map: "uq_room_user")
@@ -322,7 +322,7 @@ model ChatMessage {
   image     String?    @db.VarChar(255)
   createdAt DateTime   @default(now()) @db.DateTime(0)
   isDeleted Boolean    @default(false)
-  room      ChatRoom   @relation(fields: [room_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_chatmessage_room")
+  room      ChatRoom   @relation(fields: [room_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_chatmessage_room")
   sender    Users      @relation(fields: [sender_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_chatmessage_sender")
   reads     ChatRead[]
 

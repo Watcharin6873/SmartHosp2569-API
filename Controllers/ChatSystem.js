@@ -4,44 +4,37 @@ const prisma = require('../Config/Prisma');
 exports.getMyChatRoom = async (req, res) => {
     try {
         const user = req.user;
-        const topicId = 2; // หรือรับจาก query
-
-        const roomConfigs = [];
-
-        // 🏥 โรงพยาบาล ↔ สสจ.
-        if (['Unit_service', 'Prov'].includes(user.user_type)) {
-            roomConfigs.push({
-                topic_id: Number(topicId),
-                room_type: 'HOSPITAL_PROVINCE',
-                province_code: user.province_code,
-                zone_code: user.zone,
-                hcode9: user.hcode9
-            });
-        }
-
-        // 🏛 สสจ. ↔ เขต
-        if (['Prov', 'Zone'].includes(user.user_type)) {
-            roomConfigs.push({
-                topic_id: Number(topicId),
-                room_type: 'PROVINCE_REGION',
-                province_code: user.province_code,
-                zone_code: user.zone,
-                hcode9: user.hcode9
-            });
-        }
+        const topicId = 2; // หรือรับจาก req.query
 
         const rooms = [];
 
-        for (const config of roomConfigs) {
+        // =========================================================
+        // 1️⃣ โรงพยาบาล (Hospital ↔ Province)
+        // =========================================================
+        if (user.user_type === 'Unit_service') {
 
-            // ✅ findUnique ใช้เฉพาะ composite key
-            let room = await prisma.chatRoom.findUnique({
+            const room = await prisma.chatRoom.upsert({
                 where: {
-                    topic_id_room_type_province_code_zone_code: {
-                        topic_id: config.topic_id,
-                        room_type: config.room_type,
-                        province_code: config.province_code,
-                        zone_code: config.zone_code
+                    topic_id_room_type_hcode9_province_code_zone_code: {
+                        topic_id: topicId,
+                        room_type: 'HOSPITAL_PROVINCE',
+                        hcode9: user.hcode9,
+                        province_code: user.province_code,
+                        zone_code: user.zone
+                    }
+                },
+                update: {},
+                create: {
+                    topic_id: topicId,
+                    room_type: 'HOSPITAL_PROVINCE',
+                    hcode9: user.hcode9,
+                    province_code: user.province_code,
+                    zone_code: user.zone,
+                    members: {
+                        create: {
+                            user_id: user.id,
+                            hcode9: user.hcode9
+                        }
                     }
                 },
                 include: {
@@ -49,29 +42,27 @@ exports.getMyChatRoom = async (req, res) => {
                 }
             });
 
-            // ❌ ไม่มี room → สร้างใหม่
-            if (!room) {
-                room = await prisma.chatRoom.create({
-                    data: {
-                        topic_id: config.topic_id,
-                        room_type: config.room_type,
-                        hcode9: config.hcode9,
-                        province_code: config.province_code,
-                        zone_code: config.zone_code,
-                        members: {
-                            create: {
-                                user_id: user.id,
-                                hcode9: user.hcode9
-                            }
-                        }
-                    },
-                    include: {
-                        members: true
-                    }
-                });
-            }
-            // ✅ มี room แต่ user ยังไม่ join
-            else {
+            rooms.push(room);
+        }
+
+        // =========================================================
+        // 2️⃣ สสจ (เห็นหลาย รพ + แชทกับเขต)
+        // =========================================================
+        if (user.user_type === 'Prov') {
+
+            // ---------- 2.1 ห้อง รพ ↔ สสจ ----------
+            const hospitalRooms = await prisma.chatRoom.findMany({
+                where: {
+                    topic_id: topicId,
+                    room_type: 'HOSPITAL_PROVINCE',
+                    province_code: user.province_code
+                },
+                include: {
+                    members: true
+                }
+            });
+
+            for (const room of hospitalRooms) {
                 const isMember = room.members.some(
                     m => m.user_id === user.id
                 );
@@ -85,15 +76,111 @@ exports.getMyChatRoom = async (req, res) => {
                         }
                     });
                 }
+
+                rooms.push(room);
             }
 
-            rooms.push(room);
+            // ---------- 2.2 ห้อง สสจ ↔ เขต ----------
+            const provinceRegionRoom = await prisma.chatRoom.upsert({
+                where: {
+                    topic_id_room_type_hcode9_province_code_zone_code: {
+                        topic_id: topicId,
+                        room_type: 'PROVINCE_REGION',
+                        hcode9: user.hcode9,
+                        province_code: user.province_code,
+                        zone_code: user.zone
+                    }
+                },
+                update: {},
+                create: {
+                    topic_id: topicId,
+                    room_type: 'PROVINCE_REGION',
+                    hcode9: user.hcode9,
+                    province_code: user.province_code,
+                    zone_code: user.zone,
+                    members: {
+                        create: {
+                            user_id: user.id,
+                            hcode9: user.hcode9
+                        }
+                    }
+                },
+                include: {
+                    members: true
+                }
+            });
+
+            rooms.push(provinceRegionRoom);
         }
 
-        return res.status(200).json(rooms);
+        // =========================================================
+        // 3️⃣ เขต (เห็นหลายจังหวัด)
+        // =========================================================
+        if (user.user_type === 'Zone') {
+
+            const zoneRooms = await prisma.chatRoom.findMany({
+                where: {
+                    topic_id: topicId,
+                    room_type: 'PROVINCE_REGION',
+                    zone_code: user.zone
+                },
+                include: {
+                    members: true
+                }
+            });
+
+            for (const room of zoneRooms) {
+                const isMember = room.members.some(
+                    m => m.user_id === user.id
+                );
+
+                if (!isMember) {
+                    await prisma.chatRoomMember.create({
+                        data: {
+                            room_id: room.id,
+                            user_id: user.id,
+                            hcode9: user.hcode9
+                        }
+                    });
+                }
+
+                rooms.push(room);
+            }
+        }
+
+        // =========================================================
+        // 4️⃣ เติมชื่อ รพ / จังหวัด / เขต (join hospital table)
+        // =========================================================
+        const hcodes = [
+            ...new Set(
+                rooms.map(r => r.hcode9).filter(Boolean)
+            )
+        ];
+
+        const hospitals = await prisma.hospitals.findMany({
+            where: {
+                hcode9: { in: hcodes }
+            }
+        });
+
+        const hospitalMap = Object.fromEntries(
+            hospitals.map(h => [h.hcode9, h])
+        );
+
+        const result = rooms.map(room => {
+            const hospital = hospitalMap[room.hcode9] || {};
+            return {
+                ...room,
+                hname_th: hospital.hname_th || null,
+                province: hospital.province || null,
+                zone_name: hospital.zone_name || null
+            };
+        });
+
+        return res.status(200).json(result);
 
     } catch (err) {
-        console.error(err);
+        console.error('getMyChatRoom error:', err);
         return res.status(500).json({ message: 'Internal server error' });
     }
 };
