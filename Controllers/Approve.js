@@ -46,7 +46,12 @@ exports.provApproveEvaluation = async (req, res) => {
         } else {
             const updated = await prisma.approve_answers.update({
                 where: {
-                    id: parseInt(id)
+                    id: parseInt(id),
+                    evaluate_id: parseInt(evaluate_id),
+                    category_id: parseInt(category_id),
+                    question_id: parseInt(question_id),
+                    sub_question_id: parseInt(sub_question_id),
+                    hospital_code: hospital_code
                 },
                 data: {
                     prov_approve: Boolean(prov_approve),
@@ -134,7 +139,13 @@ exports.provUpdateApproveEvaluation = async (req, res) => {
 exports.getProvApproveEvaluation = async (req, res) => {
     try {
         // Code
-        const results = await prisma.approve_answers.findMany();
+        const {category_id, hospital_code} = req.query;
+        const results = await prisma.approve_answers.findMany({
+            where: {
+                category_id: Number(category_id),
+                hospital_code: hospital_code
+            }
+        });
 
         if (results) return res.status(200).json(results)
 

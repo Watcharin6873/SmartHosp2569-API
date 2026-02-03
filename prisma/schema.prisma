@@ -212,6 +212,8 @@ model EvaluateAnswer {
   answer_text     String?    @db.Text
   answer_value    Float
   answer_required Float
+  prov_approve    Boolean?
+  zone_approve    Boolean?
   user_id         Int
   cratedAt        DateTime   @default(now())
   updateAt        DateTime   @updatedAt
@@ -398,6 +400,7 @@ model Cyber_risk_level {
   province        String
   hname_th        String
   hosp_level      String
+  verify_status   String?  @db.VarChar(255)
   cyber_level     String
   cyber_levelname String
   zone_name       String
@@ -405,6 +408,19 @@ model Cyber_risk_level {
   usersId         Int
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model Approve_chat {
+  id              Int                      @id @default(autoincrement())
+  category_id     Int
+  question_id     Int
+  sub_question_id Int
+  hospital_code   String                   @db.VarChar(20)
+  sender_role     Approve_chat_sender_role
+  message         String                   @db.Text
+  created_at      DateTime                 @default(now()) @db.DateTime(0)
+
+  @@index([category_id, question_id, sub_question_id, hospital_code], map: "idx_sub_question_hospital")
 }
 
 enum EventList {
@@ -461,4 +477,9 @@ enum QuestionType {
 enum ChatRoom_room_type {
   HOSPITAL_PROVINCE
   PROVINCE_REGION
+}
+
+enum Approve_chat_sender_role {
+  PROVINCE
+  HOSPITAL
 }

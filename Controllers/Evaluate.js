@@ -176,7 +176,7 @@ exports.getListHospitalsInEvaluation = async (req, res) => {
         const listHcode9 = ['EA0053964', 'EA0043735', 'EA0052478'];
         const results = await prisma.$queryRaw`
             SELECT DISTINCT 
-                t2.zone, t2.zone_name, t2.province, t1.hospital_code, 
+                t2.zone, t2.zone_name, t2.province_code, t2.province, t1.hospital_code, 
                 t1.hospital_name, t1.hospital_type, t1.category_id
             FROM Evaluate AS t1 
             INNER JOIN Hospitals AS t2 
@@ -372,6 +372,80 @@ exports.requestForEditEvaluation = async (req, res) => {
             question_id: Number(question_id),
             is_draft: is_draft
         });
+
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
+exports.getScoreHospitalForSubQuestion = async (req, res) =>{
+    try {
+        // Code
+        const {hospital_code} = req.query;
+
+        const scores = await prisma.$queryRaw`
+            SELECT 
+                t2.hospital_code,
+                t2.hospital_name,
+                t1.category_id,
+                t1.question_id,
+                t1.sub_question_id,
+                SUM(t1.answer_value) AS answer_value,
+                SUM(t1.answer_required) AS answer_required
+            FROM EvaluateAnswer AS t1
+            INNER JOIN Evaluate AS t2
+            ON t1.evaluate_id = t2.id
+            WHERE t1.category_id IN (2,3,5) AND t2.hospital_code = ${hospital_code}
+            GROUP BY t2.hospital_code,t2.hospital_name,t1.category_id, t1.question_id, t1.sub_question_id
+            UNION ALL
+            SELECT 
+                tb1.hospital_code,
+                tb1.hospital_name,
+                tb1.category_id,
+                tb1.question_id,
+                tb1.sub_question_id,
+                SUM(tb1.answer_value) AS answer_value,
+                SUM(tb1.answer_required) AS answer_required
+            FROM (SELECT
+                    t2.hospital_code,
+                    t2.hospital_name,
+                    t1.topic_id,
+                    t1.category_id,
+                    t1.question_id,
+                    sub_question_id,
+                    t1.answer_value,
+                    t1.answer_required
+                FROM EvaluateAnswer AS t1
+                INNER JOIN Evaluate AS t2
+                ON t1.evaluate_id = t2.id
+                WHERE t1.category_id = 4 AND t2.hospital_code = ${hospital_code}
+                AND t1.sub_question_id NOT IN (
+                '113','114','115','116','117',
+                '118','119','120','121','125',
+                '136','139','142','153','154')
+                UNION ALL
+                SELECT DISTINCT
+                    t2.hospital_code,
+                    t2.hospital_name,
+                    t1.topic_id,
+                    t1.category_id,
+                    t1.question_id,
+                    t1.sub_question_id,
+                    t1.answer_value,
+                    t1.answer_required
+                FROM EvaluateAnswer AS t1
+                INNER JOIN Evaluate AS t2
+                ON t1.evaluate_id = t2.id
+                WHERE t1.category_id = 4 AND t2.hospital_code = ${hospital_code}
+                AND t1.sub_question_id IN (
+                '113','114','115','116','117',
+                '118','119','120','121','125',
+                '136','139','142','153','154')) AS tb1
+            GROUP BY tb1.hospital_code, tb1.hospital_name, tb1.category_id,tb1.question_id,tb1.sub_question_id
+        `;
+
+        if (scores) return res.status(200).json(scores)
 
     } catch (err) {
         console.log(err);
