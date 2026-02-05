@@ -3,6 +3,7 @@ const router = express.Router();
 const {
     provApproveEvaluation,
     provUpdateApproveEvaluation,
+    provIsCheckedEvaluation,
     getProvApproveEvaluation,
     getProvAndZoneApprove,
     zoneApproveEvaluation
@@ -12,6 +13,8 @@ const { authCheck } = require('../Middleware/Auth');
 router.post('/provApproveEvaluation', authCheck, provApproveEvaluation);
 
 router.put('/provUpdateApproveEvaluation', authCheck, provUpdateApproveEvaluation);
+
+router.put('/provIsCheckedEvaluation', authCheck, provIsCheckedEvaluation);
 
 router.put('/zoneApproveEvaluation', authCheck, zoneApproveEvaluation);
 

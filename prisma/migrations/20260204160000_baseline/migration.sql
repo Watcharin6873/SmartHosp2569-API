@@ -1,0 +1,3 @@
+-- baseline migration
+-- database schema already exists
+-- no-op

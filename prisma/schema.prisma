@@ -264,21 +264,22 @@ model Evidence_sub_id {
 }
 
 model Approve_answers {
-  id              Int       @id @default(autoincrement())
+  id              Int           @id @default(autoincrement())
   evaluate_id     Int
   category_id     Int
   question_id     Int
   sub_question_id Int
   hospital_code   String
-  prov_approve    Boolean   @default(false)
-  zone_approve    Boolean   @default(false)
+  prov_status     ApproveStatus @default(NONE)
+  zone_status     ApproveStatus @default(NONE)
+  is_checked      Boolean       @default(false)
   user_id         Int
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  categories      Category  @relation(fields: [category_id], references: [id])
-  evaluates       Evaluate  @relation(fields: [evaluate_id], references: [id])
-  questions       Question  @relation(fields: [question_id], references: [id])
-  sub_questions   Sub_quest @relation(fields: [sub_question_id], references: [id])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  categories      Category      @relation(fields: [category_id], references: [id])
+  evaluates       Evaluate      @relation(fields: [evaluate_id], references: [id])
+  questions       Question      @relation(fields: [question_id], references: [id])
+  sub_questions   Sub_quest     @relation(fields: [sub_question_id], references: [id])
 
   @@index([category_id], map: "Approve_answers_category_id_fkey")
   @@index([evaluate_id], map: "Approve_answers_evaluate_id_fkey")
@@ -480,6 +481,13 @@ enum ChatRoom_room_type {
 }
 
 enum Approve_chat_sender_role {
+  ZONE
   PROVINCE
   HOSPITAL
+}
+
+enum ApproveStatus {
+  NONE
+  PASS
+  FAIL
 }
