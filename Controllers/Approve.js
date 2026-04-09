@@ -74,11 +74,7 @@ exports.provApproveEvaluation = async (req, res) => {
 // Zone approved
 exports.zoneApproveEvaluation = async (req, res) => {
     try {
-        // Code
-        const {
-            newChecked,
-            hospital_code
-        } = req.body;
+        const { newChecked, hospital_code } = req.body;
 
         // ✅ Validate input
         if (typeof newChecked !== "boolean" || !hospital_code) {
@@ -87,17 +83,26 @@ exports.zoneApproveEvaluation = async (req, res) => {
             });
         }
 
+        // ✅ Map status
+        let new_status = "";
+
+        if (newChecked === true) {
+            new_status = "PASS";
+        } else if (newChecked === false) {
+            new_status = "NONE";
+        }
+
         const result = await prisma.approve_answers.updateMany({
             where: {
                 hospital_code: hospital_code
             },
             data: {
-                zone_status: newChecked,
+                zone_status: new_status,
                 updatedAt: new Date()
             }
         });
 
-        // ✅ ไม่พบข้อมูลที่ตรงเงื่อนไข
+        // ✅ ไม่พบข้อมูล
         if (result.count === 0) {
             return res.status(404).json({
                 message: `ไม่พบข้อมูลของโรงพยาบาล ${hospital_code}`
@@ -106,9 +111,10 @@ exports.zoneApproveEvaluation = async (req, res) => {
 
         // ✅ สำเร็จ
         return res.status(200).json({
-            message: newChecked
-                ? `อนุมัติผลการประเมินของ ${hospital_code} แล้ว!!`
-                : `ยกเลิกการอนุมัติผลการประเมินของ ${hospital_code} แล้ว!!`,
+            message:
+                new_status === "PASS"
+                    ? `อนุมัติผลการประเมินของ ${hospital_code} แล้ว!!`
+                    : `ไม่อนุมัติผลการประเมินของ ${hospital_code} แล้ว!!`,
             updated: result.count
         });
 
@@ -116,7 +122,7 @@ exports.zoneApproveEvaluation = async (req, res) => {
         console.error(err);
         res.status(500).json({ error: 'Internal server error' });
     }
-}
+};
 
 exports.provIsCheckedEvaluation = async (req, res) => {
     try {

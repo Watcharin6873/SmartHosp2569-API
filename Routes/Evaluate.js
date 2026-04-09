@@ -8,7 +8,8 @@ const {
     getListHospitalsInEvaluation,
     getListHospitalsInEvaluation2,
     requestForEditEvaluation,
-    getScoreHospitalForSubQuestion
+    getScoreHospitalForSubQuestion,
+    getScoreHospitalForSubQuestion2
 } = require('../Controllers/Evaluate');
 const { authCheck } = require('../Middleware/Auth');
 
@@ -27,6 +28,8 @@ router.get('/getListHospitalsInEvaluation', authCheck, getListHospitalsInEvaluat
 router.get('/getListHospitalsInEvaluation2', authCheck, getListHospitalsInEvaluation2);
 
 router.get('/getScoreHospitalForSubQuestion', authCheck, getScoreHospitalForSubQuestion);
+
+router.get('/getScoreHospitalForSubQuestion2', authCheck, getScoreHospitalForSubQuestion2);
 
 router.put('/requestForEditEvaluation', authCheck, requestForEditEvaluation);
 

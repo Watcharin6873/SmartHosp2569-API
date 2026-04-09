@@ -160,33 +160,45 @@ exports.getReportAllCatByHcode9 = async (req, res) => {
                 t2.hospital_code,
                 t2.hospital_name,
                 t1.category_id,
-                SUM(t1.answer_value) AS answer_value,
-                SUM(t1.answer_required) AS answer_required
+                SUM(CASE WHEN (t3.prov_status IN ("FAIL", "NONE")) THEN 0 ELSE t1.answer_value END) AS answer_value,
+                SUM(CASE WHEN (t3.prov_status IN ("FAIL", "NONE")) THEN 0 ELSE t1.answer_required END) AS answer_required
             FROM EvaluateAnswer AS t1
             INNER JOIN Evaluate AS t2
             ON t1.evaluate_id = t2.id
-            WHERE t1.category_id IN (2,3,5) AND t2.hospital_code = ${hcode9} AND t2.is_draft = 0
+            INNER JOIN Approve_answers AS t3 
+            ON t1.evaluate_id = t3.evaluate_id AND t1.question_id = t3.question_id AND t1.sub_question_id = t3.sub_question_id
+            INNER JOIN Hospitals AS t4 
+            ON t2.hospital_code = t4.hcode9
+            WHERE t1.category_id IN (2,3,5) AND t2.hospital_code = ${hcode9} AND t2.is_draft = 0 
+            AND t2.hospital_type IN ('โรงพยาบาลศูนย์', 'โรงพยาบาลทั่วไป', 'โรงพยาบาลชุมชน', 'หน่วยงานทดสอบ')
             GROUP BY t2.hospital_code,t2.hospital_name,t1.category_id
             UNION ALL
             SELECT 
                 tb1.hospital_code,
                 tb1.hospital_name,
                 tb1.category_id,
-                SUM(tb1.answer_value) AS answer_value,
-                SUM(tb1.answer_required) AS answer_required
+                SUM(CASE WHEN (tb1.prov_status IN ("FAIL", "NONE")) THEN 0 ELSE tb1.answer_value END) AS answer_value,
+                SUM(CASE WHEN (tb1.prov_status IN ("FAIL", "NONE")) THEN 0 ELSE tb1.answer_required END) AS answer_required
             FROM (SELECT
                     t2.hospital_code,
                     t2.hospital_name,
                     t1.topic_id,
                     t1.category_id,
                     t1.question_id,
-                    sub_question_id,
+                    t1.sub_question_id,
                     t1.answer_value,
-                    t1.answer_required
+                    t1.answer_required,
+                    t3.prov_status,
+                    t3.zone_status
                 FROM EvaluateAnswer AS t1
                 INNER JOIN Evaluate AS t2
                 ON t1.evaluate_id = t2.id
-                WHERE t1.category_id = 4 AND t2.hospital_code = ${hcode9} AND t2.is_draft = 0
+                INNER JOIN Approve_answers AS t3 
+                ON t1.evaluate_id = t3.evaluate_id AND t1.question_id = t3.question_id AND t1.sub_question_id = t3.sub_question_id
+                INNER JOIN Hospitals AS t4 
+                ON t2.hospital_code = t4.hcode9
+                WHERE t1.category_id = 4 AND t2.hospital_code = ${hcode9} AND t2.is_draft = 0 
+                AND t2.hospital_type IN ('โรงพยาบาลศูนย์', 'โรงพยาบาลทั่วไป', 'โรงพยาบาลชุมชน', 'หน่วยงานทดสอบ')
                 AND t1.sub_question_id NOT IN (
                 '113','114','115','116','117',
                 '118','119','120','121','125',
@@ -200,11 +212,18 @@ exports.getReportAllCatByHcode9 = async (req, res) => {
                     t1.question_id,
                     t1.sub_question_id,
                     t1.answer_value,
-                    t1.answer_required
+                    t1.answer_required,
+                    t3.prov_status,
+                    t3.zone_status
                 FROM EvaluateAnswer AS t1
                 INNER JOIN Evaluate AS t2
                 ON t1.evaluate_id = t2.id
+                INNER JOIN Approve_answers AS t3 
+                ON t1.evaluate_id = t3.evaluate_id AND t1.question_id = t3.question_id AND t1.sub_question_id = t3.sub_question_id
+                INNER JOIN Hospitals AS t4 
+                ON t2.hospital_code = t4.hcode9
                 WHERE t1.category_id = 4 AND t2.hospital_code = ${hcode9} AND t2.is_draft = 0
+                AND t2.hospital_type IN ('โรงพยาบาลศูนย์', 'โรงพยาบาลทั่วไป', 'โรงพยาบาลชุมชน', 'หน่วยงานทดสอบ')
                 AND t1.sub_question_id IN (
                 '113','114','115','116','117',
                 '118','119','120','121','125',
@@ -300,6 +319,100 @@ exports.monitorLogEventByUserId = async (req, res) => {
         res.json(result)
 
     } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error!.' });
+    }
+}
+
+
+exports.getEvaluationSummary = async(req, res) =>{
+    try{
+        const report = await prisma.$queryRaw`
+            SELECT 
+                tb1.hospital_code,
+                tb1.hospital_name,
+                tb1.category_id,
+                SUM(tb1.answer_value) AS answer_value,
+                SUM(tb1.answer_required) AS answer_required
+            FROM (SELECT
+                    t2.hospital_code,
+                    t2.hospital_name,
+                    t1.category_id,
+                    t1.question_id,
+                    t1.sub_question_id,
+                    IF(t3.prov_status IN ('FAIL', 'NONE'), 0, t1.answer_value) AS answer_value,
+                    IF(t3.prov_status IN ('FAIL', 'NONE'), 0, t1.answer_required) AS answer_required,
+                    t3.prov_status,
+                    t3.zone_status
+                FROM EvaluateAnswer AS t1 
+                INNER JOIN Evaluate AS t2 
+                ON t1.evaluate_id = t2.id AND t1.question_id = t2.question_id
+                INNER JOIN Approve_answers AS t3 
+                ON t1.evaluate_id = t3.evaluate_id AND t1.question_id = t3.question_id AND t1.sub_question_id = t3.sub_question_id
+                INNER JOIN Hospitals AS t4 
+                ON t2.hospital_code = t4.hcode9
+                WHERE t1.category_id IN (2,3,5) AND t2.is_draft = 0 AND t2.hospital_type IN ('โรงพยาบาลศูนย์', 'โรงพยาบาลทั่วไป', 'โรงพยาบาลชุมชน', 'หน่วยงานทดสอบ')) AS tb1
+            GROUP BY tb1.hospital_code,tb1.hospital_name,tb1.category_id
+            UNION ALL 
+            SELECT 
+                tb1.hospital_code,
+                tb1.hospital_name,
+                tb1.category_id,
+                SUM(tb1.answer_value) AS answer_value,
+                SUM(tb1.answer_required) AS answer_required
+            FROM (SELECT
+                    t2.hospital_code,
+                    t2.hospital_name,
+                    t1.category_id,
+                    t1.question_id,
+                    t1.sub_question_id,
+                    IF(t3.prov_status IN ('FAIL', 'NONE'), 0, t1.answer_value) AS answer_value,
+                    IF(t3.prov_status IN ('FAIL', 'NONE'), 0, t1.answer_required) AS answer_required,
+                    t3.prov_status,
+                    t3.zone_status
+                FROM EvaluateAnswer AS t1 
+                INNER JOIN Evaluate AS t2 
+                ON t1.evaluate_id = t2.id AND t1.question_id = t2.question_id
+                INNER JOIN Approve_answers AS t3 
+                ON t1.evaluate_id = t3.evaluate_id AND t1.question_id = t3.question_id AND t1.sub_question_id = t3.sub_question_id
+                INNER JOIN Hospitals AS t4 
+                ON t2.hospital_code = t4.hcode9
+                WHERE t1.category_id IN (4) AND t2.is_draft = 0 
+                AND t1.sub_question_id NOT IN (
+                                '113','114','115','116','117',
+                                '118','119','120','121','125',
+                                '136','139','142','153','154') 
+                AND t2.hospital_type IN ('โรงพยาบาลศูนย์', 'โรงพยาบาลทั่วไป', 'โรงพยาบาลชุมชน', 'หน่วยงานทดสอบ')
+                UNION ALL 
+                SELECT DISTINCT
+                    t2.hospital_code,
+                    t2.hospital_name,
+                    t1.category_id,
+                    t1.question_id,
+                    t1.sub_question_id,
+                    IF(t3.prov_status IN ('FAIL', 'NONE'), 0, t1.answer_value) AS answer_value,
+                    IF(t3.prov_status IN ('FAIL', 'NONE'), 0, t1.answer_required) AS answer_required,
+                    t3.prov_status,
+                    t3.zone_status
+                FROM EvaluateAnswer AS t1 
+                INNER JOIN Evaluate AS t2 
+                ON t1.evaluate_id = t2.id AND t1.question_id = t2.question_id
+                INNER JOIN Approve_answers AS t3 
+                ON t1.evaluate_id = t3.evaluate_id AND t1.question_id = t3.question_id AND t1.sub_question_id = t3.sub_question_id
+                INNER JOIN Hospitals AS t4 
+                ON t2.hospital_code = t4.hcode9
+                WHERE t1.category_id IN (4) AND t2.is_draft = 0 
+                AND t1.sub_question_id IN (
+                                '113','114','115','116','117',
+                                '118','119','120','121','125',
+                                '136','139','142','153','154')  
+                AND t2.hospital_type IN ('โรงพยาบาลศูนย์', 'โรงพยาบาลทั่วไป', 'โรงพยาบาลชุมชน', 'หน่วยงานทดสอบ')
+                ) AS tb1
+            GROUP BY tb1.hospital_code,tb1.hospital_name,tb1.category_id
+        `;
+
+        if (report) return res.status(200).json(report);
+    }catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Internal server error!.' });
     }
