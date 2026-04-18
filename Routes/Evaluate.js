@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { 
-    createEvaluation,
+    createEvaluation_v2,
+    createEvaluation_v3,
     getDraftEvaluation, 
     getEvaluationById,
     getEvaluationByCatId,
@@ -15,7 +16,7 @@ const { authCheck } = require('../Middleware/Auth');
 
 
 // Route to create Evaluation
-router.post('/createEvaluation', authCheck, createEvaluation);
+router.post('/createEvaluation', authCheck, createEvaluation_v3);
 
 router.get('/getDraftEvaluation', authCheck, getDraftEvaluation);
 

@@ -1,8 +1,8 @@
 const prisma = require('../Config/Prisma');
 const { Prisma } = require('@prisma/client');
 
-// Create Evaluation
-exports.createEvaluation = async (req, res) => {
+
+exports.createEvaluation_v1 = async (req, res) => {
     try {
         // Code
         const {
@@ -47,8 +47,8 @@ exports.createEvaluation = async (req, res) => {
                         topic_id: parseInt(topic_id),
                         category_id: parseInt(category_id),
                         question_id: parseInt(question_id),
-                        hospital_code: hcode9,
-                        is_draft: is_draft
+                        hospital_code: hcode9
+                        // is_draft: is_draft
                     }
                 });
 
@@ -87,19 +87,6 @@ exports.createEvaluation = async (req, res) => {
                         });
                     }
                 }
-            } else {
-                evaluate = await tx.evaluate.create({
-                    data: {
-                        topic_id: parseInt(topic_id),
-                        category_id: parseInt(category_id),
-                        question_id: parseInt(question_id),
-                        hospital_code: hcode9,
-                        hospital_name: hospData.hname_th,
-                        hospital_type: hospData.dept_type,
-                        is_draft,
-                        user_id: parseInt(user_id)
-                    }
-                });
             }
 
             // 2. INSERT / UPDATE Evaluate Answers (รองรับ checkbox)
@@ -169,6 +156,254 @@ exports.createEvaluation = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 }
+
+
+exports.createEvaluation_v2 = async (req, res) => {
+    try {
+        const {
+            evaluate_id,
+            topic_id,
+            category_id,
+            question_id,
+            hcode9,
+            is_draft,
+            answers
+        } = req.body;
+
+        const user_id = req.body.user_id;
+
+        if (!question_id || !answers || answers.length === 0) {
+            return res.status(400).json({ error: 'ข้อมูลไม่ครบ' });
+        }
+
+        const hospData = await prisma.hospitals.findFirst({
+            where: { hcode9 }
+        });
+
+        if (!hospData) {
+            return res.status(404).json({ error: 'ไม่พบข้อมูลหน่วยบริการ' });
+        }
+
+        const result = await prisma.$transaction(async (tx) => {
+
+            // 🔥 1. UPSERT EVALUATE
+            let evaluate;
+
+            if (evaluate_id) {
+                evaluate = await tx.evaluate.update({
+                    where: { id: Number(evaluate_id) },
+                    data: {
+                        topic_id: Number(topic_id),
+                        category_id: Number(category_id),
+                        question_id: Number(question_id),
+                        hospital_code: hcode9,
+                        hospital_name: hospData.hname_th,
+                        hospital_type: hospData.dept_type,
+                        is_draft,
+                        user_id: Number(user_id)
+                    }
+                });
+            } else {
+                evaluate = await tx.evaluate.create({
+                    data: {
+                        topic_id: Number(topic_id),
+                        category_id: Number(category_id),
+                        question_id: Number(question_id),
+                        hospital_code: hcode9,
+                        hospital_name: hospData.hname_th,
+                        hospital_type: hospData.dept_type,
+                        is_draft,
+                        user_id: Number(user_id)
+                    }
+                });
+            }
+
+            // 🔥 2. DELETE OLD ANSWERS (ตาม requirement)
+            await tx.evaluateAnswer.deleteMany({
+                where: { evaluate_id: evaluate.id }
+            });
+
+            // 🔥 3. INSERT NEW ANSWERS
+            const createData = [];
+
+            for (const item of answers) {
+
+                const answer = await tx.answer.findUnique({
+                    where: { id: Number(item.answer_id) }
+                });
+
+                if (!answer) {
+                    throw new Error(`Answer ID ${item.answer_id} ไม่ถูกต้อง`);
+                }
+
+                createData.push({
+                    evaluate_id: evaluate.id,
+                    topic_id: Number(topic_id),
+                    category_id: Number(category_id),
+                    question_id: Number(question_id),
+                    sub_question_id: Number(item.sub_question_id),
+                    choice_id: Number(item.choice_id),
+                    answer_id: Number(item.answer_id),
+                    answer_text: item.answer_text || null,
+                    answer_value: answer.choice_value,
+                    answer_required: answer.choice_required,
+                    user_id: Number(user_id)
+                });
+            }
+
+            await tx.evaluateAnswer.createMany({
+                data: createData
+            });
+
+            return evaluate;
+        });
+
+        res.status(200).json({
+            success: true,
+            message: is_draft ? 'บันทึกร่างสำเร็จ' : 'ส่งแบบประเมินสำเร็จ',
+            evaluate_id: result.id,
+            is_draft: result.is_draft
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+exports.createEvaluation_v3 = async (req, res) => {
+    try {
+        const {
+            topic_id,
+            category_id,
+            question_id,
+            hcode9,
+            is_draft,
+            answers
+        } = req.body;
+
+        const user_id = req.body.user_id;
+
+        if (!question_id || !answers || answers.length === 0) {
+            return res.status(400).json({ error: 'ข้อมูลไม่ครบ' });
+        }
+
+        const hospData = await prisma.hospitals.findFirst({
+            where: { hcode9 }
+        });
+
+        if (!hospData) {
+            return res.status(404).json({ error: 'ไม่พบข้อมูลหน่วยบริการ' });
+        }
+
+        const result = await prisma.$transaction(async (tx) => {
+
+            let evaluate;
+
+            // 🔥 1. TRY CREATE (ให้ DB เป็นตัวกันซ้ำ)
+            try {
+                evaluate = await tx.evaluate.create({
+                    data: {
+                        topic_id: Number(topic_id),
+                        category_id: Number(category_id),
+                        question_id: Number(question_id),
+                        hospital_code: hcode9,
+                        hospital_name: hospData.hname_th,
+                        hospital_type: hospData.dept_type,
+                        is_draft,
+                        user_id: Number(user_id)
+                    }
+                });
+            } catch (err) {
+                // 🔥 ถ้าซ้ำ → ไป update แทน
+                if (err.code === 'P2002') {
+                    evaluate = await tx.evaluate.findFirst({
+                        where: {
+                            topic_id: Number(topic_id),
+                            category_id: Number(category_id),
+                            question_id: Number(question_id),
+                            hospital_code: hcode9
+                        }
+                    });
+
+                    if (!evaluate) {
+                        throw new Error('ไม่พบ evaluate หลัง unique constraint');
+                    }
+
+                    evaluate = await tx.evaluate.update({
+                        where: { id: evaluate.id },
+                        data: {
+                            is_draft,
+                            user_id: Number(user_id),
+                            hospital_name: hospData.hname_th,
+                            hospital_type: hospData.dept_type
+                        }
+                    });
+                } else {
+                    throw err;
+                }
+            }
+
+            // 🔥 2. DELETE ANSWERS (ตาม requirement)
+            await tx.evaluateAnswer.deleteMany({
+                where: { evaluate_id: evaluate.id }
+            });
+
+            // 🔥 3. PREPARE ANSWERS
+            const answerIds = answers.map(a => Number(a.answer_id));
+
+            const answerList = await tx.answer.findMany({
+                where: { id: { in: answerIds } }
+            });
+
+            const answerMap = {};
+            answerList.forEach(a => {
+                answerMap[a.id] = a;
+            });
+
+            const createData = answers.map(item => {
+                const answer = answerMap[Number(item.answer_id)];
+
+                if (!answer) {
+                    throw new Error(`Answer ID ${item.answer_id} ไม่ถูกต้อง`);
+                }
+
+                return {
+                    evaluate_id: evaluate.id,
+                    topic_id: Number(topic_id),
+                    category_id: Number(category_id),
+                    question_id: Number(question_id),
+                    sub_question_id: Number(item.sub_question_id),
+                    choice_id: Number(item.choice_id),
+                    answer_id: Number(item.answer_id),
+                    answer_text: item.answer_text || null,
+                    answer_value: answer.choice_value,
+                    answer_required: answer.choice_required,
+                    user_id: Number(user_id)
+                };
+            });
+
+            // 🔥 4. INSERT ใหม่ทั้งหมด
+            await tx.evaluateAnswer.createMany({
+                data: createData
+            });
+
+            return evaluate;
+        });
+
+        res.status(200).json({
+            success: true,
+            message: is_draft ? 'บันทึกร่างสำเร็จ' : 'ส่งแบบประเมินสำเร็จ',
+            evaluate_id: result.id,
+            is_draft: result.is_draft
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
 
 // Get list hospitals evaluation
 exports.getListHospitalsInEvaluation = async (req, res) => {
@@ -345,6 +580,19 @@ exports.requestForEditEvaluation = async (req, res) => {
             }
         });
 
+        await prisma.approve_answers.updateMany({
+            where: {
+                question_id: parseInt(question_id),
+                hospital_code: hcode9
+            },
+            data: {
+                prov_status: "NONE",
+                zone_status: "NONE",
+                user_id: parseInt(user_id),
+                updatedAt: new Date()
+            }
+        })
+
         // ✅ ไม่มีแถวถูกอัปเดต
         if (updated.count === 0) {
             return res.status(404).json({
@@ -381,10 +629,10 @@ exports.requestForEditEvaluation = async (req, res) => {
     }
 }
 
-exports.getScoreHospitalForSubQuestion = async (req, res) =>{
+exports.getScoreHospitalForSubQuestion = async (req, res) => {
     try {
         // Code
-        const {hospital_code} = req.query;
+        const { hospital_code } = req.query;
 
         const scores = await prisma.$queryRaw`
             SELECT 
@@ -456,10 +704,10 @@ exports.getScoreHospitalForSubQuestion = async (req, res) =>{
 }
 
 
-exports.getScoreHospitalForSubQuestion2 = async (req, res) =>{
+exports.getScoreHospitalForSubQuestion2 = async (req, res) => {
     try {
         // Code
-        const {hospital_code} = req.query;
+        const { hospital_code } = req.query;
 
         const scores = await prisma.$queryRaw`
             SELECT 

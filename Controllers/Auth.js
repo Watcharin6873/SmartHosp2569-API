@@ -115,8 +115,7 @@ exports.checkStatusAccount = async (req, res) => {
             where: {
                 email: email,
                 hcode: hcode,
-                hcode9: hcode9,
-                hname_th: hname_th,
+                hcode9: hcode9, 
                 name_th: name_th,
                 position: position,
                 position_id: position_id,
@@ -153,8 +152,7 @@ exports.loginSmartHosp = async (req, res) => {
             where: {
                 email: email,
                 hcode: hcode,
-                hcode9: hcode9,
-                hname_th: hname_th,
+                hcode9: hcode9, 
                 name_th: name_th,
                 position: position,
                 position_id: position_id,

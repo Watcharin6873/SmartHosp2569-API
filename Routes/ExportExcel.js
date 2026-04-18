@@ -2,8 +2,10 @@ const express = require('express');
 const router = express.Router();
 const {
     exportToExcelMulti,
-    exportToExcelMulti_v2,
-    exportToExcelMulti_v3
+    exportToExcelMulti_v4,
+    testQueryDataFromProvApprove,
+    queryResultForexportExcel,
+    queryForTemplateExcelExport
 } = require('../Controllers/ExportExcel');
 const {
     authCheck,
@@ -11,9 +13,13 @@ const {
 
 router.get('/exportToExcelMulti', authCheck, exportToExcelMulti);
 
-router.post('/exportToExcelMulti_v2', authCheck, exportToExcelMulti_v2);
+router.get('/testQueryDataFromProvApprove', testQueryDataFromProvApprove);
 
-router.post('/exportToExcelMulti_v3', authCheck, exportToExcelMulti_v3);
+router.post('/exportToExcelMulti_v4', authCheck, exportToExcelMulti_v4);
+
+router.get('/queryResultForexportExcel', queryResultForexportExcel);
+
+router.get('/queryForTemplateExcelExport', queryForTemplateExcelExport);
 
 
 module.exports = router;

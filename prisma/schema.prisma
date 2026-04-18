@@ -91,6 +91,7 @@ model Question {
   id              Int               @id @default(autoincrement())
   topic_id        Int
   category_id     Int
+  question_number String?           @db.VarChar(16)
   question_name   String            @db.Text
   user_id         Int
   cratedAt        DateTime          @default(now())
@@ -110,23 +111,24 @@ model Question {
 }
 
 model Sub_quest {
-  id              Int               @id @default(autoincrement())
-  topic_id        Int
-  category_id     Int
-  question_id     Int
-  sub_quest_name  String            @db.Text
-  is_required     Boolean           @default(false)
-  question_type   QuestionType      @default(radio)
-  user_id         Int
-  cratedAt        DateTime          @default(now())
-  updateAt        DateTime          @updatedAt
-  approveAnswers  Approve_answers[]
-  choices         Choice[]
-  evaluateAnswers EvaluateAnswer[]
-  categories      Category          @relation(fields: [category_id], references: [id])
-  questions       Question          @relation(fields: [question_id], references: [id])
-  topics          Topic             @relation(fields: [topic_id], references: [id])
-  users           Users             @relation(fields: [user_id], references: [id])
+  id               Int               @id @default(autoincrement())
+  topic_id         Int
+  category_id      Int
+  question_id      Int
+  sub_quest_number String?           @db.VarChar(16)
+  sub_quest_name   String            @db.Text
+  is_required      Boolean           @default(false)
+  question_type    QuestionType      @default(radio)
+  user_id          Int
+  cratedAt         DateTime          @default(now())
+  updateAt         DateTime          @updatedAt
+  approveAnswers   Approve_answers[]
+  choices          Choice[]
+  evaluateAnswers  EvaluateAnswer[]
+  categories       Category          @relation(fields: [category_id], references: [id])
+  questions        Question          @relation(fields: [question_id], references: [id])
+  topics           Topic             @relation(fields: [topic_id], references: [id])
+  users            Users             @relation(fields: [user_id], references: [id])
 
   @@index([category_id], map: "Sub_quest_category_id_fkey")
   @@index([question_id], map: "Sub_quest_question_id_fkey")
@@ -194,9 +196,9 @@ model Evaluate {
   users           Users             @relation(fields: [user_id], references: [id])
   evaluateAnswers EvaluateAnswer[]
 
+  @@unique([topic_id, category_id, question_id, hospital_code], map: "unique_evaluate")
   @@index([category_id], map: "Evaluate_category_id_fkey")
   @@index([question_id], map: "Evaluate_question_id_fkey")
-  @@index([topic_id], map: "Evaluate_topic_id_fkey")
   @@index([user_id], map: "Evaluate_user_id_fkey")
 }
 

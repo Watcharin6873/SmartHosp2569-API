@@ -496,8 +496,8 @@ exports.exportToExcelMulti_v3 = async (req, res) => {
                         }
                     }
                 },
-                approveAnswers:{
-                    select:{
+                approveAnswers: {
+                    select: {
                         evaluate_id: true,
                         category_id: true,
                         question_id: true,
@@ -784,3 +784,424 @@ exports.exportToExcelMulti_v3 = async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 };
+
+exports.exportToExcelMulti_v4 = async (req, res) => {
+    try {
+        // =========================
+        // 0. PREPARE INPUT
+        // =========================
+        const hospCode = (req.body.hcode9 || [])
+            .map(h => String(h).trim())
+            .filter(h => /^[A-Za-z0-9]+$/.test(h));
+
+        if (!hospCode.length) {
+            return res.json({ success: false, message: "No hospital code" });
+        }
+
+        // =========================
+        // 1. QUERY TEMPLATE
+        // =========================
+        const templateSql = `
+            SELECT
+                c.id AS category_id,
+                c.category_name_th,
+                q.id AS question_id,
+                q.question_number,
+                sq.id AS sub_quest_id,
+                sq.sub_quest_number,
+                a.id AS answer_id
+            FROM Category c
+            LEFT JOIN Question q ON c.id = q.category_id
+            LEFT JOIN Sub_quest sq ON c.id = sq.category_id AND q.id = sq.question_id
+            LEFT JOIN Choice ch 
+                ON ch.category_id = c.id 
+                AND ch.question_id = q.id 
+                AND ch.sub_question_id = sq.id
+            LEFT JOIN Answer a ON a.choice_id = ch.id
+            WHERE a.id IS NOT NULL
+            ORDER BY c.id, q.id, sq.id, a.id
+        `;
+
+        const templateData = await prisma.$queryRawUnsafe(templateSql);
+
+        // =========================
+        // 2. QUERY VALUE (SAFE PLACEHOLDER)
+        // =========================
+        const placeholders = hospCode.map(() => '?').join(',');
+
+        const valueSql = `
+            SELECT
+                e.hospital_code,
+                e.hospital_name,
+                e.category_id,
+                e.question_id,
+                ea.sub_question_id,
+                ea.answer_id
+            FROM Evaluate e
+            LEFT JOIN EvaluateAnswer ea ON ea.evaluate_id = e.id
+            WHERE e.is_draft = false
+            AND e.hospital_code IN (${placeholders})
+            AND EXISTS (
+                SELECT 1
+                FROM Approve_answers ap
+                WHERE ap.evaluate_id = e.id
+                AND ap.prov_status IN ('PASS', 'FAIL')
+            )
+            ORDER BY 
+                e.hospital_code,
+                e.category_id,
+                e.question_id,
+                ea.sub_question_id
+        `;
+
+        const valueData = await prisma.$queryRawUnsafe(valueSql, ...hospCode);
+
+        // =========================
+        // 3. BUILD COLUMN STRUCTURE
+        // =========================
+        const columns = [];
+        const columnMap = new Map();
+
+        templateData.forEach(row => {
+            const key = `${row.category_id}|${row.question_id}|${row.sub_quest_id}|${row.answer_id}`;
+
+            if (!columnMap.has(key)) {
+                columnMap.set(key, columns.length);
+
+                columns.push({
+                    key,
+                    category_id: row.category_id,
+                    category_name_th: row.category_name_th,
+                    question_id: row.question_id,
+                    question_number: row.question_number,
+                    sub_quest_id: row.sub_quest_id,
+                    sub_quest_number: row.sub_quest_number,
+                    answer_id: row.answer_id
+                });
+            }
+        });
+
+        // =========================
+        // 4. GROUP VALUE DATA
+        // =========================
+        const hospitalMap = new Map();
+
+        valueData.forEach(row => {
+            const hKey = row.hospital_code;
+
+            if (!hospitalMap.has(hKey)) {
+                hospitalMap.set(hKey, {
+                    hospital_name: row.hospital_name,
+                    hospital_code: row.hospital_code,
+                    answers: new Set()
+                });
+            }
+
+            const key = `${row.category_id}|${row.question_id}|${row.sub_question_id}|${row.answer_id}`;
+            hospitalMap.get(hKey).answers.add(key);
+        });
+
+        // =========================
+        // 5. CREATE EXCEL (MULTI SHEET)
+        // =========================
+        const workbook = new ExcelJS.Workbook();
+
+        const groupBy = (arr, key) =>
+            arr.reduce((acc, cur) => {
+                acc[cur[key]] = acc[cur[key]] || [];
+                acc[cur[key]].push(cur);
+                return acc;
+            }, {});
+
+        // 👉 group category
+        const catGroup = groupBy(columns, "category_name_th");
+
+        // =========================
+        // LOOP CREATE SHEET
+        // =========================
+        Object.entries(catGroup).forEach(([cat, catColumns]) => {
+
+            const worksheet = workbook.addWorksheet(cat.substring(0, 31)); // Excel จำกัด 31 char
+
+            worksheet.views = [{ state: 'frozen', xSplit: 2, ySplit: 4 }];
+
+            // FIXED HEADER
+            worksheet.mergeCells("A1:A4");
+            worksheet.mergeCells("B1:B4");
+
+            worksheet.getCell("A1").value = "ชื่อหน่วยบริการ";
+            worksheet.getCell("B1").value = "รหัสหน่วยบริการ 9 หลัก";
+
+            let colIndex = 3;
+
+            // =========================
+            // HEADER (เฉพาะ category นี้)
+            // =========================
+            const qGroup = groupBy(catColumns, "question_number");
+
+            Object.entries(qGroup).forEach(([q, sqList]) => {
+                const qStart = colIndex;
+
+                const sqGroup = groupBy(sqList, "sub_quest_number");
+
+                Object.entries(sqGroup).forEach(([sq, ansList]) => {
+                    const sqStart = colIndex;
+
+                    ansList.forEach(col => {
+                        worksheet.getCell(4, colIndex).value = col.answer_id;
+                        colIndex++;
+                    });
+
+                    const sqEnd = colIndex - 1;
+                    if (sqStart <= sqEnd) {
+                        worksheet.mergeCells(3, sqStart, 3, sqEnd);
+                        worksheet.getCell(3, sqStart).value = sq;
+                    }
+                });
+
+                const qEnd = colIndex - 1;
+                if (qStart <= qEnd) {
+                    worksheet.mergeCells(2, qStart, 2, qEnd);
+                    worksheet.getCell(2, qStart).value = q;
+                }
+            });
+
+            // 🔹 row 1 = category (เต็ม sheet)
+            if (colIndex > 3) {
+                worksheet.mergeCells(1, 3, 1, colIndex - 1);
+                worksheet.getCell(1, 3).value = cat;
+            }
+
+            // =========================
+            // FILL DATA
+            // =========================
+            let rowIndex = 5;
+
+            hospitalMap.forEach(h => {
+                worksheet.getCell(rowIndex, 1).value = h.hospital_name;
+                worksheet.getCell(rowIndex, 1).alignment = { horizontal: "left", vertical: "middle" };
+                worksheet.getCell(rowIndex, 2).value = h.hospital_code;
+
+                catColumns.forEach((col, i) => {
+                    const val = h.answers.has(col.key) ? "1" : "0";
+                    worksheet.getCell(rowIndex, i + 3).value = val;
+                });
+
+                rowIndex++;
+            });
+
+            // =========================
+            // STYLE
+            // =========================
+            worksheet.eachRow(row => {
+                row.eachCell(cell => {
+                    if (!cell.alignment) {
+                        cell.alignment = { vertical: "middle", horizontal: "center" };
+                    }
+                });
+            });
+
+        });
+
+        const choiceData = await prisma.answer.findMany({});
+
+        const choiceSheet = workbook.addWorksheet("Choice_text");
+
+        // HEADER
+        choiceSheet.columns = [
+            { header: "answer_id", key: "answer_id", width: 15 },
+            { header: "choice_text", key: "choice_text", width: 40 },
+            { header: "choice_value", key: "choice_value", width: 15 },
+            { header: "choice_required", key: "choice_required", width: 20 }
+        ];
+
+        // DATA
+        choiceData.forEach(row => {
+            choiceSheet.addRow({
+                answer_id: row.id,
+                choice_text: row.choice_text ?? "",
+                choice_value: row.choice_value ?? 0,
+                choice_required: row.choice_required ?? 0
+            });
+        });
+
+        // =========================
+        // 9. EXPORT
+        // =========================
+        res.setHeader(
+            "Content-Type",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+
+        res.setHeader(
+            "Content-Disposition",
+            "attachment; filename=export.xlsx"
+        );
+
+        await workbook.xlsx.write(res);
+        res.end();
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+};
+
+
+exports.testQueryDataFromProvApprove = async (req, res) => {
+    try {
+        const data = await prisma.$queryRawUnsafe(`
+            SELECT 
+                e.hospital_code,
+                e.hospital_name,
+                e.category_id,
+                e.question_id,
+                ea.sub_question_id,
+                ea.answer_id,
+                aa.prov_status,
+                aa.zone_status,
+                aa.user_id
+            FROM Evaluate e
+            INNER JOIN EvaluateAnswer ea 
+                ON e.id = ea.evaluate_id
+                AND e.category_id = ea.category_id
+                AND e.question_id = ea.question_id
+            INNER JOIN Approve_answers aa
+                ON aa.evaluate_id = ea.evaluate_id
+                AND aa.category_id = ea.category_id
+                AND aa.question_id = ea.question_id
+                AND aa.sub_question_id = ea.sub_question_id
+                AND aa.hospital_code = e.hospital_code
+            WHERE 
+                e.is_draft = 0
+                AND aa.prov_status IN ('PASS', 'FAIL')
+            ORDER BY hospital_code, category_id, question_id, sub_question_id ASC
+            `);
+
+        res.json({
+            success: true,
+            count: data.length,
+            data: data
+        });
+
+    } catch (err) {
+        console.error('Error testQueryDataFromProvApprove:', err);
+        res.status(500).json({
+            success: false,
+            error: "Internal server error"
+        });
+    }
+};
+
+exports.queryResultForexportExcel = async (req, res) => {
+    try {
+        const hospCode = Array.isArray(req.body.hcode9)
+            ? req.body.hcode9.map(h => `'${String(h).trim()}'`).filter(Boolean)
+            : [];
+
+        if (!hospCode.length) {
+            return res.json({ success: true, count: 0, data: [] });
+        }
+
+        const sql = `
+            SELECT
+                e.hospital_code,
+                e.hospital_name,
+                e.category_id,
+                c.category_name_th,    
+                e.question_id,
+                q.question_number,
+                ea.sub_question_id,
+                sq.sub_quest_number,
+                ea.answer_id
+            FROM Evaluate e
+            LEFT JOIN Category c ON e.category_id = c.id
+            LEFT JOIN Question q ON e.question_id = q.id
+            LEFT JOIN EvaluateAnswer ea ON ea.evaluate_id = e.id
+            LEFT JOIN Sub_quest sq ON ea.sub_question_id = sq.id
+            WHERE e.is_draft = false 
+            AND e.hospital_code IN (${hospCode.join(",")})
+            AND EXISTS (
+                SELECT 1
+                FROM Approve_answers ap
+                WHERE ap.evaluate_id = e.id
+                AND ap.prov_status IN ('PASS', 'FAIL')
+            )
+            ORDER BY 
+                e.hospital_code,
+                e.category_id,
+                e.question_id,
+                ea.sub_question_id
+        `;
+
+        const data = await prisma.$queryRawUnsafe(sql);
+
+        res.json({
+            success: true,
+            count: data.length,
+            data: data
+        });
+    } catch (err) {
+        console.error('Error testAPI2:', err);
+        res.status(500).json({
+            success: false,
+            error: "Internal server error"
+        });
+    }
+};
+
+exports.queryForTemplateExcelExport = async (req, res) => {
+    try {
+
+        const sql = `
+            SELECT
+                c.id AS category_id,
+                c.category_name_th,
+                q.id AS question_id,
+                q.question_number,
+                q.question_name,
+                sq.id AS sub_quest_id,
+                sq.sub_quest_number,
+                sq.sub_quest_name,
+                ch.answer_id,
+                ch.choice_text,
+                ch.choice_value,
+                ch.choice_required
+            FROM Category AS c
+            LEFT JOIN Question AS q 
+            ON c.id = q.category_id
+            LEFT JOIN Sub_quest AS sq 
+            ON c.id = sq.category_id AND q.id = sq.question_id
+            LEFT JOIN (SELECT 
+                        ch.id,
+                        ch.category_id,
+                        ch.question_id,
+                        ch.sub_question_id,
+                        a.id AS answer_id,
+                        a.choice_id,
+                        a.choice_text,
+                        a.choice_value,
+                        a.choice_required
+                    FROM Choice AS ch 
+                    INNER JOIN Answer AS a 
+                    ON ch.id = a.choice_id) AS ch
+            ON sq.category_id = ch.category_id AND sq.question_id = ch.question_id AND sq.id = ch.sub_question_id
+            ORDER BY c.id,question_id,sub_quest_id ASC
+        `;
+
+        const data = await prisma.$queryRawUnsafe(sql);
+
+        res.json({
+            success: true,
+            count: data.length,
+            data: data
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            error: "Internal server error"
+        });
+    }
+}
