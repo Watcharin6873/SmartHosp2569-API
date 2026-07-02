@@ -194,7 +194,7 @@ exports.getProvAndZoneApprove = async (req, res) => {
         const results = await prisma.$queryRaw`
             SELECT
                 t2.zone, t2.zone_name, t2.province_code, t2.province,
-                t1.hospital_code,t2.hname_th AS hospital_name, t2.dept_type AS hospital_type,
+                t2.hcode9 AS hospital_code,t2.hname_th AS hospital_name, t2.dept_type AS hospital_type,
                 CAST(COUNT(CASE WHEN (t1.prov_status IN ("PASS","FAIL") AND t1.category_id = 2) THEN 1 END) AS SIGNED) AS prov_approvedCat1,
                 CAST(COUNT(CASE WHEN (t1.prov_status = "NONE" AND t1.category_id = 2) THEN 1 END) AS SIGNED) AS prov_penddingCat1,
 
@@ -218,10 +218,12 @@ exports.getProvAndZoneApprove = async (req, res) => {
 
                 CAST(COUNT(CASE WHEN (t1.zone_status IN ("PASS","FAIL") AND t1.category_id = 5) THEN 1 END) AS SIGNED) AS zone_approvedCat4,
                 CAST(COUNT(CASE WHEN (t1.zone_status = "NONE" AND t1.category_id = 5) THEN 1 END) AS SIGNED) AS zone_penddingCat4
-            FROM Approve_answers AS t1
-            INNER JOIN Hospitals AS t2 
+            FROM Hospitals AS t2 
+            LEFT JOIN Approve_answers AS t1
             ON t1.hospital_code = t2.hcode9
-            GROUP BY t2.zone, t2.zone_name, t2.province_code, t2.province, t1.hospital_code,t2.hname_th, t2.dept_type
+            WHERE t2.dept_type IN ('โรงพยาบาลศูนย์', 'โรงพยาบาลทั่วไป', 'โรงพยาบาลชุมชน', 'หน่วยงานทดสอบ') 
+            AND t2.hcode9 NOT IN ('EA0053964', 'EA0043735', 'EA0052478')
+            GROUP BY t2.zone, t2.zone_name, t2.hcode9, t2.province, t1.hospital_code,t2.hname_th, t2.dept_type
         `;
 
         const safeResults = JSON.parse(

@@ -9,6 +9,7 @@ const http = require('http')
 const jwt = require('jsonwebtoken')
 const { Server } = require('socket.io')
 const { chatSocket } = require('./socket/ChatSocket')
+const path = require('path');
 
 //Middleware
 app.use(morgan('dev'))
@@ -17,7 +18,8 @@ app.use(cors())
 
 // Folder-upload-evident
 app.use('/api/questionnaire/evidence_files', express.static('evidence_files'))
-app.use('/api/questionnaire/evidence_subid', express.static('evidence_subid'))
+// app.use('/api/questionnaire/evidence_subid', express.static('evidence_subid'))
+app.use('/api/questionnaire/evidence_subid', express.static(process.env.EVIDENCE_PATH))
 app.use('/api/questionnaire/user_manual', express.static('user_manual'))
 
 
